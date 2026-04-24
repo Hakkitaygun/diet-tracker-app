@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import MealTracker from './components/MealTracker';
 import Recommendations from './components/Recommendations';
 import UserProfile from './components/UserProfile';
+import DietPlanner from './components/DietPlanner';
 import Analytics from './components/Analytics';
 import AuthScreen from './components/AuthScreen';
 
@@ -149,6 +150,12 @@ function App() {
           ⚡ Öneriler
         </button>
         <button 
+          className={currentPage === 'diet-planner' ? 'active' : ''}
+          onClick={() => setCurrentPage('diet-planner')}
+        >
+          🗓️ Planlar
+        </button>
+        <button 
           className={currentPage === 'analytics' ? 'active' : ''}
           onClick={() => setCurrentPage('analytics')}
         >
@@ -166,6 +173,7 @@ function App() {
         {currentPage === 'dashboard' && <Dashboard userId={userId} user={user} onUpdate={fetchUser} refreshKey={dashboardRefresh} />}
         {currentPage === 'meal-tracker' && <MealTracker userId={userId} onMealAdded={() => { fetchUser(); setDashboardRefresh(prev => prev + 1); }} />}
         {currentPage === 'recommendations' && <Recommendations userId={userId} refreshKey={dashboardRefresh} />}
+        {currentPage === 'diet-planner' && <DietPlanner userId={userId} />}
         {currentPage === 'analytics' && <Analytics userId={userId} />}
         {currentPage === 'profile' && <UserProfile userId={userId} onUserUpdated={fetchUser} />}
       </main>

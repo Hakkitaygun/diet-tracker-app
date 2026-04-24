@@ -128,6 +128,33 @@ const tableDefinitions = {
       )
     `
   },
+  diet_preferences: {
+    sqlite: `
+      CREATE TABLE IF NOT EXISTS diet_preferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER UNIQUE NOT NULL,
+        favorite_foods TEXT DEFAULT '[]',
+        banned_foods TEXT DEFAULT '[]',
+        diet_style TEXT DEFAULT 'balanced',
+        notes TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `,
+    postgres: `
+      CREATE TABLE IF NOT EXISTS diet_preferences (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL REFERENCES users(id),
+        favorite_foods TEXT DEFAULT '[]',
+        banned_foods TEXT DEFAULT '[]',
+        diet_style TEXT DEFAULT 'balanced',
+        notes TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+  },
   daily_summary: {
     sqlite: `
       CREATE TABLE IF NOT EXISTS daily_summary (
@@ -287,7 +314,7 @@ const ensureColumn = async (table, column, definition) => {
 };
 
 const initializeDatabase = async () => {
-  const tableOrder = ['users', 'meals', 'meal_items', 'food_database', 'daily_summary', 'health_metrics', 'ai_usage'];
+  const tableOrder = ['users', 'meals', 'meal_items', 'food_database', 'diet_preferences', 'daily_summary', 'health_metrics', 'ai_usage'];
 
   for (const tableName of tableOrder) {
     await run(tableDefinitions[tableName][usePostgres ? 'postgres' : 'sqlite']);

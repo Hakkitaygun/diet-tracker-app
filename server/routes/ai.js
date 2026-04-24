@@ -113,6 +113,33 @@ async function getFoodCatalogSnapshot() {
     .join('\n');
 }
 
+async function getDietPreferencesSnapshot(userId) {
+  const prefs = await get('SELECT * FROM diet_preferences WHERE user_id = ?', [userId]);
+  if (!prefs) return 'No preference data provided.';
+
+  const safeParseList = (value) => {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return String(value || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  };
+
+  const favorites = safeParseList(prefs.favorite_foods);
+  const banned = safeParseList(prefs.banned_foods);
+
+  return [
+    `Style: ${prefs.diet_style || 'balanced'}`,
+    `Favorites: ${favorites.length > 0 ? favorites.join(', ') : 'none'}`,
+    `Banned: ${banned.length > 0 ? banned.join(', ') : 'none'}`,
+    `Notes: ${prefs.notes || 'none'}`
+  ].join(' | ');
+}
+
 // Generate personalized AI recommendations using Gemini
 router.post('/recommendations', async (req, res) => {
   try {
@@ -146,6 +173,7 @@ router.post('/recommendations', async (req, res) => {
     const goal = user.daily_calorie_goal || 2000;
     const remainingCalories = goal - dailyCalories;
     const availableFoodCatalog = await getFoodCatalogSnapshot();
+    const dietPreferences = await getDietPreferencesSnapshot(user_id);
 
     const nutritionSignature = `${Math.round(dailyCalories)}:${Math.round(dailyProtein)}:${Math.round(dailyCarbs)}:${Math.round(dailyFat)}`;
     const cacheKey = `${user_id}:${targetDate}:${nutritionSignature}`;
@@ -175,7 +203,7 @@ router.post('/recommendations', async (req, res) => {
             total_carbs: dailyCarbs,
             total_fat: dailyFat
           },
-          { availableFoodCatalog }
+          { availableFoodCatalog, dietPreferences }
         );
 
         if (aiRecommendations?.success === false) {
@@ -275,6 +303,7 @@ router.get('/suggestions/:userId', async (req, res) => {
     const goal = user.daily_calorie_goal || 2000;
     const remainingCalories = Math.max(0, goal - dailyCalories);
     const availableFoodCatalog = await getFoodCatalogSnapshot();
+    const dietPreferences = await getDietPreferencesSnapshot(req.params.userId);
 
     const suggestionSignature = `${Math.round(dailyCalories)}:${Math.round(remainingCalories)}:${Math.round(goal)}`;
     const cacheKey = `${req.params.userId}:${today}:${suggestionSignature}`;
@@ -300,7 +329,7 @@ router.get('/suggestions/:userId', async (req, res) => {
           user,
           dailyCalories,
           remainingCalories,
-          { availableFoodCatalog }
+          { availableFoodCatalog, dietPreferences }
         );
 
         if (aiSuggestions?.success === false) {
@@ -395,6 +424,7 @@ router.get('/analytics/:userId', async (req, res) => {
 
     const average = calculateAverages(analytics);
     const availableFoodCatalog = await getFoodCatalogSnapshot();
+    const dietPreferences = await getDietPreferencesSnapshot(req.params.userId);
 
     const cacheKey = `${req.params.userId}:${days}`;
     const cached = getCache(aiCache.analytics, cacheKey);
@@ -418,7 +448,7 @@ router.get('/analytics/:userId', async (req, res) => {
           req.params.userId,
           user,
           average,
-          { availableFoodCatalog }
+          { availableFoodCatalog, dietPreferences }
         );
         setCache(aiCache.analytics, cacheKey, aiAnalysis);
       } catch (error) {
@@ -555,6 +585,7 @@ router.post('/chat', async (req, res) => {
       current_suggestions,
       daily_nutrition,
       available_food_catalog: await getFoodCatalogSnapshot(),
+      diet_preferences: await getDietPreferencesSnapshot(user_id),
       user_profile: {
         age: user.age,
         gender: user.gender,
