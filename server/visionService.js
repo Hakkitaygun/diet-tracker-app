@@ -1,7 +1,17 @@
 const axios = require('axios');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const VISION_OPENROUTER_API_KEY = process.env.VISION_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const VISION_GEMINI_API_KEY = process.env.VISION_GEMINI_API_KEY;
+const VISION_OPENROUTER_API_KEY = process.env.VISION_OPENROUTER_API_KEY;
+const VISION_ALLOW_SHARED_KEYS = String(process.env.VISION_ALLOW_SHARED_KEYS || 'false').toLowerCase() === 'true';
+const SHARED_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const SHARED_OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+const GEMINI_VISION_MODELS = (process.env.GEMINI_VISION_MODELS || 'gemini-2.0-flash,gemini-2.0-flash-lite')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 const OPENROUTER_VISION_MODELS = (process.env.OPENROUTER_VISION_MODELS || 'google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free')
   .split(',')
   .map((m) => m.trim())
@@ -46,9 +56,84 @@ function getFallbackFoodEstimate(hintText = '') {
   return found || { name: 'Karisik yemek', calories_per_100g: 120, protein: 5, carbs: 12, fat: 4 };
 }
 
+function getVisionGeminiKey() {
+  if (VISION_GEMINI_API_KEY) return VISION_GEMINI_API_KEY;
+  if (VISION_ALLOW_SHARED_KEYS) return SHARED_GEMINI_API_KEY;
+  return null;
+}
+
+function getVisionOpenRouterKey() {
+  if (VISION_OPENROUTER_API_KEY) return VISION_OPENROUTER_API_KEY;
+  if (VISION_ALLOW_SHARED_KEYS) return SHARED_OPENROUTER_API_KEY;
+  return null;
+}
+
+async function callGeminiVision(prompt, imageBase64, mimeType) {
+  const apiKey = getVisionGeminiKey();
+  if (!apiKey) {
+    throw new Error('VISION_GEMINI_API_KEY not configured');
+  }
+
+  let lastError = null;
+
+  for (const model of GEMINI_VISION_MODELS) {
+    try {
+      const response = await axios.post(
+        `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`,
+        {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType,
+                    data: imageBase64
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1024
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      const parts = response?.data?.candidates?.[0]?.content?.parts || [];
+      const text = parts.map((p) => p?.text || '').join('\n').trim();
+      if (!text) {
+        throw new Error(`Empty response from model ${model}`);
+      }
+
+      return text;
+    } catch (error) {
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 400 || status === 404 || status === 429) {
+          lastError = new Error(`[${model}] ${error.response.data?.error?.message || 'Gemini vision unavailable'}`);
+          continue;
+        }
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('No available Gemini vision model');
+}
+
 async function callOpenRouterVision(prompt, imageBase64, mimeType) {
-  if (!VISION_OPENROUTER_API_KEY) {
-    throw new Error('VISION_OPENROUTER_API_KEY or OPENROUTER_API_KEY not configured');
+  const apiKey = getVisionOpenRouterKey();
+  if (!apiKey) {
+    throw new Error('VISION_OPENROUTER_API_KEY not configured');
   }
 
   let lastError = null;
@@ -78,7 +163,7 @@ async function callOpenRouterVision(prompt, imageBase64, mimeType) {
         },
         {
           headers: {
-            Authorization: `Bearer ${VISION_OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'HTTP-Referer': ORIGIN,
             'X-Title': APP_NAME
@@ -134,7 +219,13 @@ Return exactly:
 }`;
 
   try {
-    const text = await callOpenRouterVision(prompt, imageBase64, mimeType);
+    let text = '';
+    try {
+      text = await callGeminiVision(prompt, imageBase64, mimeType);
+    } catch (geminiError) {
+      text = await callOpenRouterVision(prompt, imageBase64, mimeType);
+    }
+
     const parsed = extractJsonPayload(text);
 
     if (!parsed || !parsed.food_name) {
