@@ -527,7 +527,15 @@ router.post('/chat', async (req, res) => {
     const aiResponse = await getAIChatResponse(user_question, {
       current_recommendations,
       current_suggestions,
-      daily_nutrition
+      daily_nutrition,
+      user_profile: {
+        age: user.age,
+        gender: user.gender,
+        height: user.height,
+        weight: user.weight,
+        goal: user.goal,
+        daily_calorie_goal: user.daily_calorie_goal
+      }
     });
 
     if (aiResponse?.success === false) {
