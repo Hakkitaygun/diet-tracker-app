@@ -6,6 +6,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState(null);
+  const [catalogPlans, setCatalogPlans] = useState(null);
   const [usage, setUsage] = useState(null);
   const [error, setError] = useState('');
   const isFetchingRef = useRef(false);
@@ -104,7 +105,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
       if (!forceRefresh && cached?.data && isCacheFresh(cached, 60 * 60 * 1000)) {
         setRecommendations(cached.data);
         setLoading(false);
-        return;
+        return cached.data;
       }
 
       setLoading(true);
@@ -113,6 +114,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
       });
       setRecommendations(response.data);
       writeCache('recommendations', response.data);
+      return response.data;
     } catch (error) {
       const message = error?.response?.data?.error || error.message || 'Bilinmeyen hata';
       if (message.includes('429')) {
@@ -129,6 +131,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
     } finally {
       setLoading(false);
     }
+    return null;
   }, [userId, readCache, writeCache]);
 
   const fetchSuggestions = useCallback(async (forceRefresh = false) => {
@@ -155,15 +158,30 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
     }
   }, [userId, readCache, writeCache, hasInvalidSuggestionCache]);
 
+  const fetchCatalogPlans = useCallback(async (summary) => {
+    try {
+      const response = await api.get('/api/food/meal-plans', {
+        params: {
+          remainingCalories: summary?.remaining?.calories || 600,
+          goal: summary?.user?.goal || 'balance'
+        }
+      });
+      setCatalogPlans(response.data);
+    } catch (error) {
+      console.error('Error fetching catalog meal plans:', error);
+    }
+  }, []);
+
   const loadData = useCallback(async (forceRefresh = false) => {
     if (!userId || isFetchingRef.current) return;
     isFetchingRef.current = true;
     setError('');
-    await fetchRecommendations(forceRefresh);
+    const summary = await fetchRecommendations(forceRefresh);
     await fetchSuggestions(forceRefresh);
     await fetchUsage();
+    await fetchCatalogPlans(summary);
     isFetchingRef.current = false;
-  }, [userId, fetchRecommendations, fetchSuggestions, fetchUsage]);
+  }, [userId, fetchRecommendations, fetchSuggestions, fetchUsage, fetchCatalogPlans]);
 
   useEffect(() => {
     loadData();
@@ -307,6 +325,36 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
               <span className="stat-label">Günlük Hedef:</span>
               <span className="stat-value">{suggestions.dailyGoal} kcal</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {catalogPlans?.plans?.length > 0 && (
+        <div className="suggestions-section">
+          <h3>🥗 Katalog Bazlı Örnek Öğünler</h3>
+          <p>Bu planlar sadece bugün eklenen yiyeceklerle değil, uygulamanın besin kataloğuyla oluşturulur.</p>
+          <div className="catalog-plans">
+            {catalogPlans.plans.map((plan, idx) => (
+              <div key={idx} className="catalog-plan-card">
+                <div className="catalog-plan-header">
+                  <strong>{plan.title}</strong>
+                  <span>{plan.totalCalories} kcal</span>
+                </div>
+                <p>{plan.description}</p>
+                <div className="catalog-plan-macros">
+                  <span>P: {plan.totalProtein}g</span>
+                  <span>C: {plan.totalCarbs}g</span>
+                  <span>Y: {plan.totalFat}g</span>
+                </div>
+                <ul className="catalog-plan-items">
+                  {plan.items.map((item, itemIdx) => (
+                    <li key={itemIdx}>
+                      {item.name} - {item.grams}g ({item.calories} kcal)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       )}

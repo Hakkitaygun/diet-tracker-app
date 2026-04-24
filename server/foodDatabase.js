@@ -53,6 +53,32 @@ const FOOD_DATABASE = [
   { name: 'Çay', calories_per_100g: 2, protein: 0, carbs: 0, fat: 0, category: 'İçecekler', description: 'Sade çay' },
   { name: 'Portakal suyu', calories_per_100g: 45, protein: 0.7, carbs: 11, fat: 0.2, category: 'İçecekler', description: 'Taze portakal suyu' },
   { name: 'Gazlı içecek', calories_per_100g: 42, protein: 0, carbs: 11, fat: 0, category: 'İçecekler', description: 'Şekerli gazlı içecek' },
+
+  // Breakfast and protein staples
+  { name: 'Yumurta', calories_per_100g: 155, protein: 13, carbs: 1.1, fat: 11, category: 'Protein Kaynakları', description: 'Bütün yumurta' },
+  { name: 'Lor peyniri', calories_per_100g: 98, protein: 18, carbs: 3, fat: 2, category: 'Süt Ürünleri', description: 'Yağsız lor peyniri' },
+  { name: 'Kefir', calories_per_100g: 52, protein: 3.4, carbs: 4.8, fat: 2, category: 'Süt Ürünleri', description: 'Doğal kefir' },
+  { name: 'Yulaf ezmesi', calories_per_100g: 389, protein: 17, carbs: 66, fat: 7, category: 'Tahıllar', description: 'Çiğ yulaf ezmesi' },
+  { name: 'Hindi göğsü', calories_per_100g: 135, protein: 29, carbs: 0, fat: 1.5, category: 'Et', description: 'Yağsız hindi göğsü' },
+  { name: 'Ton balığı', calories_per_100g: 132, protein: 29, carbs: 0, fat: 1, category: 'Balık', description: 'Suda ton balığı' },
+
+  // Grain and legume options
+  { name: 'Bulgur', calories_per_100g: 83, protein: 3.1, carbs: 18.6, fat: 0.2, category: 'Tahıllar', description: 'Pişmiş bulgur' },
+  { name: 'Tam buğday ekmeği', calories_per_100g: 247, protein: 13, carbs: 41, fat: 4.2, category: 'Tahıllar', description: 'Tam buğday ekmeği' },
+  { name: 'Tam buğday makarna', calories_per_100g: 124, protein: 5.3, carbs: 26, fat: 0.9, category: 'Tahıllar', description: 'Pişmiş tam buğday makarna' },
+  { name: 'Mercimek', calories_per_100g: 116, protein: 9, carbs: 20, fat: 0.4, category: 'Baklagiller', description: 'Pişmiş mercimek' },
+
+  // Vegetables and healthy fats
+  { name: 'Salatalık', calories_per_100g: 15, protein: 0.7, carbs: 3.6, fat: 0.1, category: 'Sebzeler', description: 'Taze salatalık' },
+  { name: 'Ispanak', calories_per_100g: 23, protein: 2.9, carbs: 3.6, fat: 0.4, category: 'Sebzeler', description: 'Pişmiş ıspanak' },
+  { name: 'Kabak', calories_per_100g: 17, protein: 1.2, carbs: 3.1, fat: 0.3, category: 'Sebzeler', description: 'Pişmiş kabak' },
+  { name: 'Mantar', calories_per_100g: 22, protein: 3.1, carbs: 3.3, fat: 0.3, category: 'Sebzeler', description: 'Pişmiş mantar' },
+  { name: 'Avokado', calories_per_100g: 160, protein: 2, carbs: 9, fat: 15, category: 'Meyveler', description: 'Olgun avokado' },
+  { name: 'Zeytin', calories_per_100g: 115, protein: 0.8, carbs: 6, fat: 10.7, category: 'Yağlar', description: 'Siyah zeytin' },
+  { name: 'Ceviz', calories_per_100g: 654, protein: 15, carbs: 14, fat: 65, category: 'Yemişler', description: 'Çiğ ceviz' },
+  { name: 'Fındık', calories_per_100g: 628, protein: 15, carbs: 17, fat: 61, category: 'Yemişler', description: 'Çiğ fındık' },
+  { name: 'Kinoa', calories_per_100g: 120, protein: 4.4, carbs: 21, fat: 1.9, category: 'Tahıllar', description: 'Pişmiş kinoa' },
+  { name: 'Mısır', calories_per_100g: 96, protein: 3.4, carbs: 21, fat: 1.5, category: 'Tahıllar', description: 'Haşlanmış mısır taneleri' },
 ];
 
 // Initialize food database

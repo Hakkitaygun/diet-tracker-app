@@ -93,6 +93,26 @@ async function consumeAiQuota(userId) {
   };
 }
 
+async function getFoodCatalogSnapshot() {
+  const foods = await all(
+    `SELECT name, category, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g
+     FROM food_database
+     ORDER BY category, protein_per_100g DESC, calories_per_100g ASC
+     LIMIT 24`
+  );
+
+  const grouped = foods.reduce((acc, food) => {
+    const category = food.category || 'Genel';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(`${food.name} (${food.calories_per_100g} kcal/100g, P:${food.protein_per_100g}g)`);
+    return acc;
+  }, {});
+
+  return Object.entries(grouped)
+    .map(([category, items]) => `${category}: ${items.slice(0, 4).join(', ')}`)
+    .join('\n');
+}
+
 // Generate personalized AI recommendations using Gemini
 router.post('/recommendations', async (req, res) => {
   try {
@@ -125,6 +145,7 @@ router.post('/recommendations', async (req, res) => {
 
     const goal = user.daily_calorie_goal || 2000;
     const remainingCalories = goal - dailyCalories;
+    const availableFoodCatalog = await getFoodCatalogSnapshot();
 
     const nutritionSignature = `${Math.round(dailyCalories)}:${Math.round(dailyProtein)}:${Math.round(dailyCarbs)}:${Math.round(dailyFat)}`;
     const cacheKey = `${user_id}:${targetDate}:${nutritionSignature}`;
@@ -153,7 +174,8 @@ router.post('/recommendations', async (req, res) => {
             total_protein: dailyProtein,
             total_carbs: dailyCarbs,
             total_fat: dailyFat
-          }
+          },
+          { availableFoodCatalog }
         );
 
         if (aiRecommendations?.success === false) {
@@ -252,6 +274,7 @@ router.get('/suggestions/:userId', async (req, res) => {
     const dailyCalories = summary?.total_calories || 0;
     const goal = user.daily_calorie_goal || 2000;
     const remainingCalories = Math.max(0, goal - dailyCalories);
+    const availableFoodCatalog = await getFoodCatalogSnapshot();
 
     const suggestionSignature = `${Math.round(dailyCalories)}:${Math.round(remainingCalories)}:${Math.round(goal)}`;
     const cacheKey = `${req.params.userId}:${today}:${suggestionSignature}`;
@@ -276,7 +299,8 @@ router.get('/suggestions/:userId', async (req, res) => {
           req.params.userId,
           user,
           dailyCalories,
-          remainingCalories
+          remainingCalories,
+          { availableFoodCatalog }
         );
 
         if (aiSuggestions?.success === false) {
@@ -370,6 +394,7 @@ router.get('/analytics/:userId', async (req, res) => {
     );
 
     const average = calculateAverages(analytics);
+    const availableFoodCatalog = await getFoodCatalogSnapshot();
 
     const cacheKey = `${req.params.userId}:${days}`;
     const cached = getCache(aiCache.analytics, cacheKey);
@@ -392,7 +417,8 @@ router.get('/analytics/:userId', async (req, res) => {
         aiAnalysis = await getAIAnalysis(
           req.params.userId,
           user,
-          average
+          average,
+          { availableFoodCatalog }
         );
         setCache(aiCache.analytics, cacheKey, aiAnalysis);
       } catch (error) {
@@ -528,6 +554,7 @@ router.post('/chat', async (req, res) => {
       current_recommendations,
       current_suggestions,
       daily_nutrition,
+      available_food_catalog: await getFoodCatalogSnapshot(),
       user_profile: {
         age: user.age,
         gender: user.gender,

@@ -216,6 +216,52 @@
   font-style: italic;
 }
 
+.catalog-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.catalog-plan-card {
+  background: #f9fbff;
+  border: 1px solid #e6ecff;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.catalog-plan-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.catalog-plan-header strong {
+  color: #333;
+}
+
+.catalog-plan-header span {
+  color: #667eea;
+  font-weight: 700;
+}
+
+.catalog-plan-macros {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0.75rem 0;
+}
+
+.catalog-plan-items {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #444;
+  line-height: 1.5;
+}
+
 .meals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
