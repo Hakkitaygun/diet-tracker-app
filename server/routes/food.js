@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { all, get, run } = require('../database');
-const { getAIFoodSuggestion, getAIFoodImageAnalysis } = require('../geminiService');
+const { getAIFoodSuggestion } = require('../geminiService');
+const { analyzeFoodImage } = require('../visionService');
 
 const calcPortionNutrition = (food, grams) => {
   const multiplier = grams / 100;
@@ -92,7 +93,7 @@ router.post('/analyze-image', async (req, res) => {
       return res.status(400).json({ error: 'image_base64 and mime_type are required' });
     }
 
-    const result = await getAIFoodImageAnalysis(image_base64, mime_type, hint_text || '');
+    const result = await analyzeFoodImage(image_base64, mime_type, hint_text || '');
 
     if (!result.success) {
       return res.status(400).json({ error: result.error || 'Image analysis failed' });
