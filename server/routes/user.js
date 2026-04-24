@@ -186,17 +186,12 @@ router.get('/:userId/dashboard', async (req, res) => {
 // Helper functions
 
 function calculateBMR(age, gender, height, weight) {
-  // Harris-Benedict equation for BMR
-  let bmr;
+  // Mifflin-St Jeor BMR (modern standard) + light activity factor
+  const base = (10 * weight) + (6.25 * height) - (5 * age);
+  const bmr = gender === 'male' ? base + 5 : base - 161;
 
-  if (gender === 'male') {
-    bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
-  } else {
-    bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
-  }
-
-  // Adjust based on activity level (moderate activity factor = 1.55)
-  return Math.round(bmr * 1.55);
+  // When activity is unknown, use a safer default (light activity)
+  return Math.round(bmr * 1.375);
 }
 
 function calculateWeeklyAverage(weeklyData) {
