@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { all, get, run } = require('../database');
+const { getAIFoodSuggestion } = require('../geminiService');
 
 const calcPortionNutrition = (food, grams) => {
   const multiplier = grams / 100;
@@ -10,6 +11,32 @@ const calcPortionNutrition = (food, grams) => {
     carbs: parseFloat(((food.carbs_per_100g || 0) * multiplier).toFixed(1)),
     fat: parseFloat(((food.fat_per_100g || 0) * multiplier).toFixed(1))
   };
+};
+
+const upsertFoodRecord = async (food) => {
+  const name = String(food.name || '').trim();
+  if (!name) return null;
+
+  const existing = await get('SELECT * FROM food_database WHERE name = ?', [name]);
+  if (existing) {
+    return existing;
+  }
+
+  await run(
+    `INSERT INTO food_database (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, description)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      name,
+      Math.round(Number(food.calories_per_100g) || 0),
+      Number(food.protein_per_100g) || 0,
+      Number(food.carbs_per_100g) || 0,
+      Number(food.fat_per_100g) || 0,
+      String(food.category || 'AI Üretilen').trim(),
+      String(food.description || 'AI tarafından oluşturuldu').trim()
+    ]
+  );
+
+  return get('SELECT * FROM food_database WHERE name = ?', [name]);
 };
 
 // Get all foods with optional search
@@ -31,7 +58,16 @@ router.get('/', async (req, res) => {
     query += ' ORDER BY category, name LIMIT ?';
     params.push(Math.max(1, Math.min(parseInt(limit, 10) || 200, 500)));
 
-    const foods = await all(query, params);
+    let foods = await all(query, params);
+
+    if (search && foods.length === 0) {
+      const aiResult = await getAIFoodSuggestion(search);
+      if (aiResult?.success && aiResult.food) {
+        const savedFood = await upsertFoodRecord(aiResult.food);
+        foods = savedFood ? [{ ...savedFood, ai_generated: true, confidence: aiResult.food.confidence || 'low' }] : [{ ...aiResult.food, ai_generated: true }];
+      }
+    }
+
     res.json(foods);
   } catch (error) {
     res.status(500).json({ error: error.message });

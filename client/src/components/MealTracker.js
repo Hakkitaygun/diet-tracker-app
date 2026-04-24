@@ -187,7 +187,10 @@ const MealTracker = ({ userId, onMealAdded }) => {
             {foods.slice(0, 10).map(food => (
               <div key={food.id} className="food-suggestion">
                 <div className="food-info">
-                  <div className="food-name">{food.name}</div>
+                  <div className="food-name">
+                    {food.name}
+                    {food.ai_generated && <span className="ai-food-badge">AI</span>}
+                  </div>
                   <div className="food-details">
                     <span>{food.calories_per_100g} kcal/100g</span>
                     <span>Protein: {food.protein_per_100g}g</span>

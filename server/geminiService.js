@@ -300,7 +300,123 @@ async function callAIWithFallback(prompt) {
   });
 }
 
-async function getAIDietRecommendations(userId, userProfile, dailyNutrition) {
+function extractJsonPayload(text) {
+  const cleaned = String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '');
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return null;
+  }
+
+  const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+  try {
+    return JSON.parse(candidate);
+  } catch (error) {
+    return null;
+  }
+}
+
+function getFallbackFoodEstimate(searchTerm) {
+  const query = String(searchTerm || '').toLowerCase();
+
+  const presets = [
+    { match: ['havuç'], name: 'Havuç', category: 'Sebzeler', calories_per_100g: 41, protein_per_100g: 0.9, carbs_per_100g: 10, fat_per_100g: 0.2, description: 'AI tahmini ile eşlenen taze havuç' },
+    { match: ['elma'], name: 'Elma', category: 'Meyveler', calories_per_100g: 52, protein_per_100g: 0.3, carbs_per_100g: 14, fat_per_100g: 0.2, description: 'AI tahmini ile eşlenen taze elma' },
+    { match: ['muz'], name: 'Muz', category: 'Meyveler', calories_per_100g: 89, protein_per_100g: 1.1, carbs_per_100g: 23, fat_per_100g: 0.3, description: 'AI tahmini ile eşlenen taze muz' },
+    { match: ['tavuk'], name: 'Tavuk göğsü', category: 'Et', calories_per_100g: 165, protein_per_100g: 31, carbs_per_100g: 0, fat_per_100g: 3.6, description: 'AI tahmini ile eşlenen tavuk göğsü' },
+    { match: ['yoğurt', 'yogurt'], name: 'Yoğurt', category: 'Süt Ürünleri', calories_per_100g: 59, protein_per_100g: 3.5, carbs_per_100g: 3.3, fat_per_100g: 3.3, description: 'AI tahmini ile eşlenen yoğurt' },
+    { match: ['ekmek'], name: 'Tam buğday ekmeği', category: 'Tahıllar', calories_per_100g: 247, protein_per_100g: 13, carbs_per_100g: 41, fat_per_100g: 4.2, description: 'AI tahmini ile eşlenen tam buğday ekmeği' }
+  ];
+
+  const found = presets.find((preset) => preset.match.some((needle) => query.includes(needle)));
+  if (found) {
+    return {
+      ...found,
+      aiGenerated: true,
+      confidence: 'medium'
+    };
+  }
+
+  return {
+    name: searchTerm,
+    category: 'AI Üretilen',
+    calories_per_100g: 120,
+    protein_per_100g: 5,
+    carbs_per_100g: 12,
+    fat_per_100g: 4,
+    description: 'AI tarafından tahmin edilen besin değeri',
+    aiGenerated: true,
+    confidence: 'low'
+  };
+}
+
+async function getAIFoodSuggestion(searchTerm) {
+  try {
+    if (!searchTerm || !String(searchTerm).trim()) {
+      return { success: false, error: 'searchTerm is required' };
+    }
+
+    if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
+      return {
+        success: true,
+        food: getFallbackFoodEstimate(searchTerm)
+      };
+    }
+
+    const prompt = `You are a nutrition data assistant. Reply ONLY with valid JSON. No markdown, no explanation.
+
+User searched for a food that does not exist in the current database: "${searchTerm}".
+
+Return one realistic food record in this exact JSON shape:
+{
+  "name": "string",
+  "category": "string",
+  "description": "string",
+  "calories_per_100g": number,
+  "protein_per_100g": number,
+  "carbs_per_100g": number,
+  "fat_per_100g": number,
+  "confidence": "low|medium|high"
+}
+
+Rules:
+- Use common nutrition values for the closest likely food.
+- Keep numbers realistic and suitable for a diet tracker.
+- If the exact food is ambiguous, choose the closest sensible match.
+- Output only JSON.`;
+
+    const text = await callAIWithFallback(prompt);
+    const parsed = extractJsonPayload(text);
+
+    if (!parsed || !parsed.name) {
+      return {
+        success: true,
+        food: getFallbackFoodEstimate(searchTerm)
+      };
+    }
+
+    return {
+      success: true,
+      food: {
+        name: String(parsed.name).trim(),
+        category: String(parsed.category || 'AI Üretilen').trim(),
+        description: String(parsed.description || 'AI tarafından oluşturuldu').trim(),
+        calories_per_100g: Math.round(Number(parsed.calories_per_100g) || 0),
+        protein_per_100g: Number(parsed.protein_per_100g) || 0,
+        carbs_per_100g: Number(parsed.carbs_per_100g) || 0,
+        fat_per_100g: Number(parsed.fat_per_100g) || 0,
+        confidence: String(parsed.confidence || 'low')
+      }
+    };
+  } catch (error) {
+    return {
+      success: true,
+      food: getFallbackFoodEstimate(searchTerm)
+    };
+  }
+}
+
+async function getAIDietRecommendations(userId, userProfile, dailyNutrition, options = {}) {
   try {
     if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
       console.error('❌ API key not found!');
@@ -322,6 +438,12 @@ async function getAIDietRecommendations(userId, userProfile, dailyNutrition) {
   - Weight: ${userProfile.weight} kg
   - Goal: ${userProfile.goal === 'weight_loss' ? 'Kilo vermek' : userProfile.goal === 'muscle_gain' ? 'Kas kazanmak' : userProfile.goal === 'health' ? 'Sağlık' : 'Dengeli beslenme'}
   - Daily Calorie Goal: ${userProfile.daily_calorie_goal} kcal
+
+  Available Food Catalog Highlights:
+  ${options.availableFoodCatalog || 'No catalog data provided.'}
+
+  Diet Preferences:
+  ${options.dietPreferences || 'No preference data provided.'}
 
   Today:
   - Total Calories: ${dailyNutrition.total_calories} kcal
@@ -354,7 +476,7 @@ async function getAIDietRecommendations(userId, userProfile, dailyNutrition) {
   }
 }
 
-async function getAIMealSuggestions(userId, userProfile, currentCalories, remainingCalories) {
+async function getAIMealSuggestions(userId, userProfile, currentCalories, remainingCalories, options = {}) {
   try {
     if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
       console.error('❌ API key not found!');
@@ -372,6 +494,12 @@ async function getAIMealSuggestions(userId, userProfile, currentCalories, remain
   Goal: ${userProfile.goal === 'weight_loss' ? 'Kilo vermek' : userProfile.goal === 'muscle_gain' ? 'Kas kazanmak' : 'Saglikli beslenme'}
   Remaining Calories: ${remainingCalories} kcal
   Daily Goal: ${userProfile.daily_calorie_goal} kcal
+
+  Available Food Catalog Highlights:
+  ${options.availableFoodCatalog || 'No catalog data provided.'}
+
+  Diet Preferences:
+  ${options.dietPreferences || 'No preference data provided.'}
 
   Give exactly 3 meal options. Each option must include:
   - Yemek adi
@@ -398,7 +526,7 @@ async function getAIMealSuggestions(userId, userProfile, currentCalories, remain
   }
 }
 
-async function getAIAnalysis(userId, userProfile, weeklyNutrition) {
+async function getAIAnalysis(userId, userProfile, weeklyNutrition, options = {}) {
   try {
     if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
       console.error('❌ API key not found!');
@@ -419,6 +547,12 @@ async function getAIAnalysis(userId, userProfile, weeklyNutrition) {
   User: ${userProfile.name}
   Goal: ${userProfile.goal}
   Daily Calorie Goal: ${userProfile.daily_calorie_goal} kcal
+
+  Available Food Catalog Highlights:
+  ${options.availableFoodCatalog || 'No catalog data provided.'}
+
+  Diet Preferences:
+  ${options.dietPreferences || 'No preference data provided.'}
 
   Weekly Averages:
   - Calories: ${avgCalories.toFixed(0)} kcal
@@ -503,6 +637,7 @@ Rules you must follow:
 - Keep response short and practical (max 6 lines).
 - If data is insufficient, explicitly say what is missing in one short line.
 - Do not output markdown headers, tables, or long paragraphs.
+  - You may recommend foods from the catalog even if they were not already logged today.
 
 The user has received AI recommendations and now asks a follow-up question.
 
@@ -513,6 +648,12 @@ User Profile (if available):
 - Weight: ${context?.user_profile?.weight ?? 'unknown'} kg
 - Goal: ${context?.user_profile?.goal ?? 'unknown'}
 - Daily Calorie Goal: ${context?.user_profile?.daily_calorie_goal ?? 'unknown'} kcal
+
+Available Food Catalog Highlights:
+${context?.available_food_catalog || 'No catalog data provided.'}
+
+Diet Preferences:
+${context?.diet_preferences || 'No preference data provided.'}
 
 Current Recommendations:
 ${context.current_recommendations}
@@ -552,5 +693,6 @@ module.exports = {
   getAIDietRecommendations,
   getAIMealSuggestions,
   getAIAnalysis,
-  getAIChatResponse
+  getAIChatResponse,
+  getAIFoodSuggestion
 };
