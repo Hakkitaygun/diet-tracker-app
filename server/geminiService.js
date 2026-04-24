@@ -16,7 +16,7 @@ const GROQ_MODELS = (process.env.GROQ_MODELS || 'llama-3.1-8b-instant,llama3-8b-
   .split(',')
   .map((m) => m.trim())
   .filter(Boolean);
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
 
 const ORIGIN = process.env.OPENROUTER_ORIGIN || 'http://localhost:3000';
 const APP_NAME = process.env.OPENROUTER_APP_NAME || 'Diet Tracker App';
