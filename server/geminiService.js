@@ -122,58 +122,6 @@ async function callOpenRouter(prompt) {
         },
         timeout: 30000
       });
-        const questionLower = String(userQuestion || '').toLowerCase();
-        const asksCalories = /kalori|kcal|kaç/.test(questionLower) && /almalı|almali|gerek|hedef/.test(questionLower);
-
-        if (asksCalories && context?.user_profile?.age && context?.user_profile?.height && context?.user_profile?.weight && context?.user_profile?.gender) {
-          const age = Number(context.user_profile.age);
-          const height = Number(context.user_profile.height);
-          const weight = Number(context.user_profile.weight);
-          const gender = String(context.user_profile.gender).toLowerCase();
-
-          const base = (10 * weight) + (6.25 * height) - (5 * age);
-          const bmr = gender === 'male' ? base + 5 : base - 161;
-          const maintenance = Math.round(bmr * 1.375);
-          const cutMin = Math.max(1200, maintenance - 500);
-          const cutMax = Math.max(1300, maintenance - 300);
-          const gainMin = maintenance + 200;
-          const gainMax = maintenance + 300;
-
-          const deterministic = [
-            `Profiline gore tahmini koruma kalorisi: ${maintenance} kcal/gun.`,
-            `Kilo vermek icin: ${cutMin}-${cutMax} kcal/gun.`,
-            `Kilo korumak icin: ${maintenance} kcal/gun civari.`,
-            `Kas kazanmak icin: ${gainMin}-${gainMax} kcal/gun.`,
-            'Not: Bu degerler tahmindir; aktivite duzeyi ve uyku/stres durumuna gore 2-3 hafta takip ile ayar yap.'
-          ].join('\n');
-
-          return {
-            success: true,
-            response: deterministic,
-            timestamp: new Date(),
-            deterministic: true
-          };
-        }
-
-        const prompt = `You are a licensed dietitian assistant. Reply ONLY in Turkish.
-    Rules you must follow:
-    - Never invent formulas or pseudoscientific metrics.
-    - If user asks calories, use Mifflin-St Jeor logic and provide a realistic range, not extreme values.
-    - Keep response short and practical (max 6 lines).
-    - If data is insufficient, explicitly say what is missing in one short line.
-    - Do not output markdown headers, tables, or long paragraphs.
-
-    The user has received AI recommendations and now asks a follow-up question.
-
-    User Profile (if available):
-    - Age: ${context?.user_profile?.age ?? 'unknown'}
-    - Gender: ${context?.user_profile?.gender ?? 'unknown'}
-    - Height: ${context?.user_profile?.height ?? 'unknown'} cm
-    - Weight: ${context?.user_profile?.weight ?? 'unknown'} kg
-    - Goal: ${context?.user_profile?.goal ?? 'unknown'}
-    - Daily Calorie Goal: ${context?.user_profile?.daily_calorie_goal ?? 'unknown'} kcal
-
-    Current Recommendations:
       const text = response?.data?.choices?.[0]?.message?.content;
       if (!text) {
         throw createApiError('openrouter', 500, `Empty response from model ${model}`);
@@ -515,7 +463,56 @@ async function getAIChatResponse(userQuestion, context) {
       };
     }
 
-    const prompt = `You are a helpful Turkish diet consultant AI. The user has received AI recommendations and now is asking you a follow-up question.
+    const questionLower = String(userQuestion || '').toLowerCase();
+    const asksCalories = /kalori|kcal|kaç/.test(questionLower) && /almalı|almali|gerek|hedef/.test(questionLower);
+
+    if (asksCalories && context?.user_profile?.age && context?.user_profile?.height && context?.user_profile?.weight && context?.user_profile?.gender) {
+      const age = Number(context.user_profile.age);
+      const height = Number(context.user_profile.height);
+      const weight = Number(context.user_profile.weight);
+      const gender = String(context.user_profile.gender).toLowerCase();
+
+      const base = (10 * weight) + (6.25 * height) - (5 * age);
+      const bmr = gender === 'male' ? base + 5 : base - 161;
+      const maintenance = Math.round(bmr * 1.375);
+      const cutMin = Math.max(1200, maintenance - 500);
+      const cutMax = Math.max(1300, maintenance - 300);
+      const gainMin = maintenance + 200;
+      const gainMax = maintenance + 300;
+
+      const deterministic = [
+        `Profiline gore tahmini koruma kalorisi: ${maintenance} kcal/gun.`,
+        `Kilo vermek icin: ${cutMin}-${cutMax} kcal/gun.`,
+        `Kilo korumak icin: ${maintenance} kcal/gun civari.`,
+        `Kas kazanmak icin: ${gainMin}-${gainMax} kcal/gun.`,
+        'Not: Bu degerler tahmindir; aktivite duzeyi ve uyku/stres durumuna gore 2-3 hafta takip ile ayar yap.'
+      ].join('\n');
+
+      return {
+        success: true,
+        response: deterministic,
+        timestamp: new Date(),
+        deterministic: true
+      };
+    }
+
+    const prompt = `You are a licensed dietitian assistant. Reply ONLY in Turkish.
+Rules you must follow:
+- Never invent formulas or pseudoscientific metrics.
+- If user asks calories, use Mifflin-St Jeor logic and provide a realistic range, not extreme values.
+- Keep response short and practical (max 6 lines).
+- If data is insufficient, explicitly say what is missing in one short line.
+- Do not output markdown headers, tables, or long paragraphs.
+
+The user has received AI recommendations and now asks a follow-up question.
+
+User Profile (if available):
+- Age: ${context?.user_profile?.age ?? 'unknown'}
+- Gender: ${context?.user_profile?.gender ?? 'unknown'}
+- Height: ${context?.user_profile?.height ?? 'unknown'} cm
+- Weight: ${context?.user_profile?.weight ?? 'unknown'} kg
+- Goal: ${context?.user_profile?.goal ?? 'unknown'}
+- Daily Calorie Goal: ${context?.user_profile?.daily_calorie_goal ?? 'unknown'} kcal
 
 Current Recommendations:
 ${context.current_recommendations}
