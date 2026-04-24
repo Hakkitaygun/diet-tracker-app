@@ -12,6 +12,10 @@ const OPENROUTER_MODELS = (process.env.OPENROUTER_MODELS || 'google/gemma-4-26b-
   .split(',')
   .map((m) => m.trim())
   .filter(Boolean);
+const OPENROUTER_VISION_MODELS = (process.env.OPENROUTER_VISION_MODELS || 'google/gemini-2.0-flash-exp:free,meta-llama/llama-3.2-11b-vision-instruct:free,qwen/qwen2.5-vl-72b-instruct:free')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 const GROQ_MODELS = (process.env.GROQ_MODELS || 'llama-3.1-8b-instant,llama3-8b-8192')
   .split(',')
   .map((m) => m.trim())
@@ -201,6 +205,80 @@ async function callGroq(prompt) {
   }
 
   throw lastError || createApiError('groq', 500, 'No available Groq model');
+}
+
+async function callOpenRouterVision(prompt, imageBase64, mimeType) {
+  if (!OPENROUTER_API_KEY) {
+    throw createApiError('openrouter', 401, 'OPENROUTER_API_KEY not configured');
+  }
+
+  let lastError = null;
+
+  for (const model of OPENROUTER_VISION_MODELS) {
+    try {
+      const response = await axios.post(OPENROUTER_API_URL, {
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${imageBase64}`
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 2048
+      }, {
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': ORIGIN,
+          'X-Title': APP_NAME
+        },
+        timeout: 30000
+      });
+
+      const content = response?.data?.choices?.[0]?.message?.content;
+      const text = Array.isArray(content)
+        ? content.map((p) => (typeof p === 'string' ? p : p?.text || '')).join('\n').trim()
+        : String(content || '').trim();
+
+      if (!text) {
+        throw createApiError('openrouter', 500, `Empty response from model ${model}`);
+      }
+
+      console.log(`✅ OpenRouter vision success (${model})`);
+      return text;
+    } catch (error) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.error?.message || JSON.stringify(error.response.data);
+        const apiError = createApiError('openrouter', status, message);
+        lastError = apiError;
+
+        if (status === 429) {
+          setProviderCooldown('openrouter');
+          throw apiError;
+        }
+
+        if (status === 404 || status === 400) {
+          continue;
+        }
+
+        throw apiError;
+      }
+
+      lastError = error;
+    }
+  }
+
+  throw lastError || createApiError('openrouter', 500, 'No available OpenRouter vision model');
 }
 
 async function callGeminiWithContents(contents, generationConfig = {}) {
@@ -459,10 +537,10 @@ Rules:
 
 async function getAIFoodImageAnalysis(imageBase64, mimeType, hintText = '') {
   try {
-    if (!GEMINI_API_KEY) {
+    if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
       return {
         success: false,
-        error: 'GEMINI_API_KEY not configured'
+        error: 'No vision API key configured'
       };
     }
 
@@ -492,13 +570,47 @@ Rules:
 - If the image is unclear, use a conservative estimate and lower confidence.
 - Output only JSON.`;
 
-    const text = await callGeminiVision(prompt, imageBase64, mimeType);
+    let text = '';
+    const providerErrors = [];
+
+    if (GEMINI_API_KEY) {
+      try {
+        text = await callGeminiVision(prompt, imageBase64, mimeType);
+      } catch (error) {
+        providerErrors.push(`[gemini] ${error.message}`);
+      }
+    }
+
+    if (!text && OPENROUTER_API_KEY) {
+      try {
+        text = await callOpenRouterVision(prompt, imageBase64, mimeType);
+      } catch (error) {
+        providerErrors.push(`[openrouter] ${error.message}`);
+      }
+    }
+
     const parsed = extractJsonPayload(text);
 
     if (!parsed || !parsed.food_name) {
+      const fallbackSeed = String(hintText || '').trim() || 'karisik yemek';
+      const fallbackFood = getFallbackFoodEstimate(fallbackSeed);
+      const estimatedGrams = 100;
+      const caloriesPer100g = Math.max(0, Math.round(Number(fallbackFood.calories_per_100g) || 0));
+      const totalCalories = Math.round((caloriesPer100g * estimatedGrams) / 100);
+
       return {
-        success: false,
-        error: 'Unable to parse image analysis result'
+        success: true,
+        estimate: {
+          food_name: fallbackFood.name,
+          estimated_grams: estimatedGrams,
+          calories_per_100g: caloriesPer100g,
+          total_calories: totalCalories,
+          protein: Number(fallbackFood.protein_per_100g) || 0,
+          carbs: Number(fallbackFood.carbs_per_100g) || 0,
+          fat: Number(fallbackFood.fat_per_100g) || 0,
+          confidence: 'low',
+          notes: `Gorsel model gecici olarak kullanilamadi. Tahmini sonuc kullanildi. ${providerErrors.join(' | ')}`.trim()
+        }
       };
     }
 
