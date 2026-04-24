@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
 import './UserProfile.css';
 
 const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
@@ -35,7 +35,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/user/${userId}`);
+      const response = await api.get(`/api/user/${userId}`);
       setUser(response.data);
       setFormData({
         name: response.data.name,
@@ -55,7 +55,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
 
   const fetchWeightHistory = async () => {
     try {
-      const response = await axios.get(`/api/user/${userId}/weight-history?days=90`);
+      const response = await api.get(`/api/user/${userId}/weight-history?days=90`);
       setWeightHistory(response.data);
     } catch (error) {
       console.error('Error fetching weight history:', error);
@@ -79,7 +79,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
 
     try {
       setLoading(true);
-      const response = await axios.post('/api/user', {
+      const response = await api.post('/api/user', {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
         height: formData.height ? parseFloat(formData.height) : null,
@@ -104,7 +104,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
     e.preventDefault();
     try {
       setLoading(true);
-      await axios.put(`/api/user/${userId}`, {
+      await api.put(`/api/user/${userId}`, {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
         height: formData.height ? parseFloat(formData.height) : null,
@@ -132,7 +132,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
 
     try {
       setLoading(true);
-      await axios.post(`/api/user/${userId}/weight`, {
+      await api.post(`/api/user/${userId}/weight`, {
         weight: parseFloat(weight)
       });
 

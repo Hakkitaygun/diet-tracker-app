@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from './api';
 import './App.css';
 import Dashboard from './components/Dashboard';
 import MealTracker from './components/MealTracker';
@@ -17,7 +17,7 @@ function App() {
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/user/${userId}`);
+      const response = await api.get(`/api/user/${userId}`);
       setUser(response.data);
     } catch (error) {
       console.error('Error fetching user:', error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../api';
 import './MealTracker.css';
 
 // Get local date in YYYY-MM-DD format (not UTC)
@@ -24,7 +24,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
 
   const fetchFoods = useCallback(async (query = '') => {
     try {
-      const response = await axios.get('/api/food', {
+      const response = await api.get('/api/food', {
         params: { search: query }
       });
       setFoods(response.data);
@@ -36,7 +36,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const fetchMeals = useCallback(async () => {
     try {
       const today = getLocalDate();
-      const response = await axios.get(`/api/meals/user/${userId}?date=${today}`);
+      const response = await api.get(`/api/meals/user/${userId}?date=${today}`);
       setMeals(response.data);
     } catch (error) {
       console.error('Error fetching meals:', error);
@@ -61,7 +61,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const handleCreateMeal = async () => {
     try {
       setLoading(true);
-      const response = await axios.post('/api/meals', {
+      const response = await api.post('/api/meals', {
         user_id: userId,
         meal_type: mealType
       });
@@ -91,7 +91,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
       const carbs = parseFloat((food.carbs_per_100g).toFixed(1));
       const fat = parseFloat((food.fat_per_100g).toFixed(1));
 
-      await axios.post(`/api/meals/${selectedMeal}/items`, {
+      await api.post(`/api/meals/${selectedMeal}/items`, {
         food_name: food.name,
         calories: calories,
         protein: protein,

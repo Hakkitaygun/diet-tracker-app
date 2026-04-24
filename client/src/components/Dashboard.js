@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './Dashboard.css';
 
@@ -21,7 +21,7 @@ const Dashboard = ({ userId, user, onUpdate, refreshKey }) => {
     try {
       setLoading(true);
       const today = getLocalDate();
-      const response = await axios.get(`/api/meals/summary/${userId}?date=${today}`);
+      const response = await api.get(`/api/meals/summary/${userId}?date=${today}`);
       setDailySummary(response.data);
     } catch (error) {
       console.error('Error fetching daily summary:', error);
@@ -33,7 +33,7 @@ const Dashboard = ({ userId, user, onUpdate, refreshKey }) => {
   const fetchTodayMeals = useCallback(async () => {
     try {
       const today = getLocalDate();
-      const response = await axios.get(`/api/meals/user/${userId}?date=${today}`);
+      const response = await api.get(`/api/meals/user/${userId}?date=${today}`);
       setTodayMeals(response.data);
     } catch (error) {
       console.error('Error fetching meals:', error);

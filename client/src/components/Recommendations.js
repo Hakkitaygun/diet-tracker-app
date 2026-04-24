@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import api from '../api';
 import './Recommendations.css';
 
 const Recommendations = ({ userId, refreshKey = 0 }) => {
@@ -33,7 +33,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
     setChatLoading(true);
 
     try {
-      const response = await axios.post('/api/ai/chat', {
+      const response = await api.post('/api/ai/chat', {
         user_id: userId,
         user_question: userMessage,
         current_recommendations: recommendations.aiRecommendations,
@@ -97,7 +97,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
       }
 
       setLoading(true);
-      const response = await axios.post('/api/ai/recommendations', {
+      const response = await api.post('/api/ai/recommendations', {
         user_id: userId
       });
       setRecommendations(response.data);
@@ -128,7 +128,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
         return;
       }
 
-      const response = await axios.get(`/api/ai/suggestions/${userId}`);
+      const response = await api.get(`/api/ai/suggestions/${userId}`);
       setSuggestions(response.data);
       writeCache('suggestions', response.data);
     } catch (error) {
