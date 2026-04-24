@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/diet-tracker-app/static/css/main.6a1091d2.css",
+    "main.js": "/diet-tracker-app/static/js/main.c5925460.js",
+    "index.html": "/diet-tracker-app/index.html",
+    "main.6a1091d2.css.map": "/diet-tracker-app/static/css/main.6a1091d2.css.map",
+    "main.c5925460.js.map": "/diet-tracker-app/static/js/main.c5925460.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.6a1091d2.css",
+    "static/js/main.c5925460.js"
+  ]
+}
