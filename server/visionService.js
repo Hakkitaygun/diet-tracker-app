@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { get } = require('./database');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -41,8 +42,54 @@ function extractJsonPayload(text) {
   }
 }
 
-function getFallbackFoodEstimate(hintText = '') {
+async function getFallbackFoodEstimate(hintText = '') {
   const query = String(hintText || '').toLowerCase();
+
+  const normalizedHint = String(hintText || '').trim();
+  if (normalizedHint) {
+    try {
+      const exact = await get(
+        `SELECT name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g
+         FROM food_database
+         WHERE LOWER(name) = LOWER(?)
+         LIMIT 1`,
+        [normalizedHint]
+      );
+
+      if (exact) {
+        return {
+          name: exact.name,
+          calories_per_100g: Math.max(0, Number(exact.calories_per_100g) || 0),
+          protein: Number(exact.protein_per_100g) || 0,
+          carbs: Number(exact.carbs_per_100g) || 0,
+          fat: Number(exact.fat_per_100g) || 0,
+          source: 'db'
+        };
+      }
+
+      const partial = await get(
+        `SELECT name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g
+         FROM food_database
+         WHERE LOWER(name) LIKE LOWER(?)
+         ORDER BY LENGTH(name) ASC
+         LIMIT 1`,
+        [`%${normalizedHint}%`]
+      );
+
+      if (partial) {
+        return {
+          name: partial.name,
+          calories_per_100g: Math.max(0, Number(partial.calories_per_100g) || 0),
+          protein: Number(partial.protein_per_100g) || 0,
+          carbs: Number(partial.carbs_per_100g) || 0,
+          fat: Number(partial.fat_per_100g) || 0,
+          source: 'db'
+        };
+      }
+    } catch (error) {
+      // If DB lookup fails, continue with static fallback presets.
+    }
+  }
 
   const presets = [
     { match: ['muz', 'banana'], name: 'Muz', calories_per_100g: 89, protein: 1.1, carbs: 23, fat: 0.3 },
@@ -53,7 +100,11 @@ function getFallbackFoodEstimate(hintText = '') {
   ];
 
   const found = presets.find((preset) => preset.match.some((needle) => query.includes(needle)));
-  return found || { name: 'Karisik yemek', calories_per_100g: 120, protein: 5, carbs: 12, fat: 4 };
+  if (found) {
+    return { ...found, source: 'preset' };
+  }
+
+  return { name: 'Karisik yemek', calories_per_100g: 120, protein: 5, carbs: 12, fat: 4, source: 'generic' };
 }
 
 function getVisionGeminiKey() {
@@ -251,9 +302,12 @@ Return exactly:
       }
     };
   } catch (error) {
-    const fallbackFood = getFallbackFoodEstimate(hintText);
+    const fallbackFood = await getFallbackFoodEstimate(hintText);
     const estimatedGrams = 120;
     const totalCalories = Math.round((fallbackFood.calories_per_100g * estimatedGrams) / 100);
+    const fallbackNotes = fallbackFood.source === 'db'
+      ? 'Gorsel AI su anda yogun. Ipucuna gore veritabanindan tahmini sonuc gosterildi.'
+      : 'Gorsel AI su anda yogun. Tahmini sonuc gosterildi, ipucu yazarsan daha dogru olur.';
 
     return {
       success: true,
@@ -265,8 +319,8 @@ Return exactly:
         protein: fallbackFood.protein,
         carbs: fallbackFood.carbs,
         fat: fallbackFood.fat,
-        confidence: 'low',
-        notes: 'Gorsel AI su anda yogun. Tahmini sonuc gosterildi, ipucu yazarsan daha dogru olur.'
+        confidence: fallbackFood.source === 'db' ? 'medium' : 'low',
+        notes: fallbackNotes
       }
     };
   }
