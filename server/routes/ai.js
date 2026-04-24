@@ -110,16 +110,6 @@ router.post('/recommendations', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const quota = await consumeAiQuota(user_id);
-    if (!quota.allowed) {
-      return res.status(429).json({
-        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-        limit: quota.limit,
-        usedToday: quota.usage.request_count,
-        remainingToday: 0
-      });
-    }
-
     // Get today's summary
     const summary = await get(
       'SELECT * FROM daily_summary WHERE user_id = ? AND date = ?',
@@ -144,6 +134,16 @@ router.post('/recommendations', async (req, res) => {
     let warning = '';
 
     if (!aiRecommendations) {
+      const quota = await consumeAiQuota(user_id);
+      if (!quota.allowed) {
+        return res.status(429).json({
+          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+          limit: quota.limit,
+          usedToday: quota.usage.request_count,
+          remainingToday: 0
+        });
+      }
+
       try {
         aiRecommendations = await getAIDietRecommendations(
           user_id,
@@ -242,16 +242,6 @@ router.get('/suggestions/:userId', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const quota = await consumeAiQuota(req.params.userId);
-    if (!quota.allowed) {
-      return res.status(429).json({
-        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-        limit: quota.limit,
-        usedToday: quota.usage.request_count,
-        remainingToday: 0
-      });
-    }
-
     // Get today's consumption
     const today = getLocalDate();
     const summary = await get(
@@ -271,6 +261,16 @@ router.get('/suggestions/:userId', async (req, res) => {
     let warning = '';
 
     if (!aiSuggestions) {
+      const quota = await consumeAiQuota(req.params.userId);
+      if (!quota.allowed) {
+        return res.status(429).json({
+          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+          limit: quota.limit,
+          usedToday: quota.usage.request_count,
+          remainingToday: 0
+        });
+      }
+
       try {
         aiSuggestions = await getAIMealSuggestions(
           req.params.userId,
@@ -359,16 +359,6 @@ router.get('/analytics/:userId', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const quota = await consumeAiQuota(req.params.userId);
-    if (!quota.allowed) {
-      return res.status(429).json({
-        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-        limit: quota.limit,
-        usedToday: quota.usage.request_count,
-        remainingToday: 0
-      });
-    }
-    
     const endDate = new Date();
     const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
     
@@ -388,6 +378,16 @@ router.get('/analytics/:userId', async (req, res) => {
     let warning = '';
 
     if (!aiAnalysis) {
+      const quota = await consumeAiQuota(req.params.userId);
+      if (!quota.allowed) {
+        return res.status(429).json({
+          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+          limit: quota.limit,
+          usedToday: quota.usage.request_count,
+          remainingToday: 0
+        });
+      }
+
       try {
         aiAnalysis = await getAIAnalysis(
           req.params.userId,

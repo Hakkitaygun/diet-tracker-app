@@ -17,6 +17,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const [foods, setFoods] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [mealType, setMealType] = useState('Öğün');
+  const [portionGrams, setPortionGrams] = useState(100);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -85,11 +86,12 @@ const MealTracker = ({ userId, onMealAdded }) => {
 
     try {
       setLoading(true);
-      // Assuming 100g portion by default
-      const calories = Math.round(food.calories_per_100g);
-      const protein = parseFloat((food.protein_per_100g).toFixed(1));
-      const carbs = parseFloat((food.carbs_per_100g).toFixed(1));
-      const fat = parseFloat((food.fat_per_100g).toFixed(1));
+      const safePortion = Math.max(1, Number(portionGrams) || 100);
+      const multiplier = safePortion / 100;
+      const calories = Math.round((food.calories_per_100g || 0) * multiplier);
+      const protein = parseFloat(((food.protein_per_100g || 0) * multiplier).toFixed(1));
+      const carbs = parseFloat(((food.carbs_per_100g || 0) * multiplier).toFixed(1));
+      const fat = parseFloat(((food.fat_per_100g || 0) * multiplier).toFixed(1));
 
       await api.post(`/api/meals/${selectedMeal}/items`, {
         food_name: food.name,
@@ -97,7 +99,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
         protein: protein,
         carbs: carbs,
         fat: fat,
-        portion_size: '100g'
+        portion_size: `${safePortion}g`
       });
 
       setSearchQuery('');
@@ -156,6 +158,17 @@ const MealTracker = ({ userId, onMealAdded }) => {
         <div className="tracker-card">
           <h3>Gıda Ara ve Ekle</h3>
           <div className="form-group">
+            <label>Porsiyon (gram)</label>
+            <input
+              type="number"
+              min="1"
+              max="2000"
+              value={portionGrams}
+              onChange={(e) => setPortionGrams(e.target.value)}
+              className="portion-input"
+            />
+          </div>
+          <div className="form-group">
             <label>Gıda Adı</label>
             <input
               type="text"
@@ -178,6 +191,9 @@ const MealTracker = ({ userId, onMealAdded }) => {
                   <div className="food-details">
                     <span>{food.calories_per_100g} kcal/100g</span>
                     <span>Protein: {food.protein_per_100g}g</span>
+                    <span>
+                      Secili porsiyon: {Math.round((food.calories_per_100g || 0) * (Math.max(1, Number(portionGrams) || 100) / 100))} kcal
+                    </span>
                   </div>
                 </div>
                 <button
