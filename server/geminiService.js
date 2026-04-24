@@ -609,7 +609,7 @@ Rules:
           carbs: Number(fallbackFood.carbs_per_100g) || 0,
           fat: Number(fallbackFood.fat_per_100g) || 0,
           confidence: 'low',
-          notes: `Gorsel model gecici olarak kullanilamadi. Tahmini sonuc kullanildi. ${providerErrors.join(' | ')}`.trim()
+          notes: 'Gorsel analiz su anda yogun. Tahmini sonuc kullanildi. Daha iyi sonuc icin urun ipucu yazabilirsin.'
         }
       };
     }
@@ -633,9 +633,25 @@ Rules:
       }
     };
   } catch (error) {
+    const fallbackSeed = String(hintText || '').trim() || 'karisik yemek';
+    const fallbackFood = getFallbackFoodEstimate(fallbackSeed);
+    const estimatedGrams = 100;
+    const caloriesPer100g = Math.max(0, Math.round(Number(fallbackFood.calories_per_100g) || 0));
+    const totalCalories = Math.round((caloriesPer100g * estimatedGrams) / 100);
+
     return {
-      success: false,
-      error: error.message
+      success: true,
+      estimate: {
+        food_name: fallbackFood.name,
+        estimated_grams: estimatedGrams,
+        calories_per_100g: caloriesPer100g,
+        total_calories: totalCalories,
+        protein: Number(fallbackFood.protein_per_100g) || 0,
+        carbs: Number(fallbackFood.carbs_per_100g) || 0,
+        fat: Number(fallbackFood.fat_per_100g) || 0,
+        confidence: 'low',
+        notes: 'Gorsel servis gecici olarak kullanilamadi, tahmini sonuc gosterildi.'
+      }
     };
   }
 }

@@ -156,6 +156,32 @@
   font: inherit;
 }
 
+.photo-hint-wrap {
+  margin-top: 0.8rem;
+}
+
+.photo-hint-wrap label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #555;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.photo-hint-input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d8def0;
+  border-radius: 6px;
+  font-size: 0.92rem;
+}
+
+.photo-hint-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 .photo-preview-wrap {
   display: flex;
   flex-direction: column;

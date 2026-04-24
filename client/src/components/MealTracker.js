@@ -25,6 +25,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const [photoAnalysis, setPhotoAnalysis] = useState(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState('');
+  const [photoHint, setPhotoHint] = useState('');
 
   const mealTypes = ['Kahvaltı', 'Ara Öğün', 'Öğle Yemeği', 'Ara Öğün 2', 'Akşam Yemeği'];
 
@@ -157,7 +158,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
       const response = await api.post('/api/food/analyze-image', {
         image_base64: base64Data,
         mime_type: photoFile.type,
-        hint_text: searchQuery || ''
+        hint_text: photoHint || searchQuery || ''
       });
 
       setPhotoAnalysis(response.data);
@@ -273,6 +274,16 @@ const MealTracker = ({ userId, onMealAdded }) => {
               <span>Ürün Fotoğrafı</span>
               <input type="file" accept="image/*" onChange={handlePhotoSelect} />
             </label>
+            <div className="photo-hint-wrap">
+              <label>Ürün ipucu (opsiyonel)</label>
+              <input
+                type="text"
+                placeholder="Örn: muz, tavuklu pilav, salata"
+                value={photoHint}
+                onChange={(e) => setPhotoHint(e.target.value)}
+                className="photo-hint-input"
+              />
+            </div>
             {photoPreview && (
               <div className="photo-preview-wrap">
                 <img src={photoPreview} alt="Yüklenen ürün" className="photo-preview" />
@@ -293,14 +304,22 @@ const MealTracker = ({ userId, onMealAdded }) => {
             <div className="photo-analysis-card">
               <div className="photo-analysis-head">
                 <strong>{photoAnalysis.food_name}</strong>
-                <span>{photoAnalysis.confidence} güven</span>
+                <span>
+                  {photoAnalysis.confidence === 'high'
+                    ? 'yuksek guven'
+                    : photoAnalysis.confidence === 'medium'
+                      ? 'orta guven'
+                      : 'dusuk guven'}
+                </span>
               </div>
               <div className="photo-analysis-stats">
                 <div><b>{photoAnalysis.estimated_grams}g</b> tahmini porsiyon</div>
                 <div><b>{photoAnalysis.total_calories} kcal</b> toplam</div>
                 <div>P: {photoAnalysis.protein}g · K: {photoAnalysis.carbs}g · Y: {photoAnalysis.fat}g</div>
               </div>
-              {photoAnalysis.notes && <p className="photo-analysis-notes">{photoAnalysis.notes}</p>}
+              {photoAnalysis.notes && !photoAnalysis.notes.toLowerCase().includes('api error') && (
+                <p className="photo-analysis-notes">{photoAnalysis.notes}</p>
+              )}
               <button
                 type="button"
                 className="add-photo-btn"
