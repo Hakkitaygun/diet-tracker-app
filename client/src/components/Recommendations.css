@@ -1,0 +1,494 @@
+.recommendations {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.recommendations-header {
+  margin-bottom: 2rem;
+}
+
+.recommendations-header h2 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.recommendations-header p {
+  color: #999;
+  font-size: 0.95rem;
+}
+
+.recommendations-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-item .label {
+  font-size: 0.9rem;
+  color: #999;
+  margin-bottom: 0.5rem;
+}
+
+.summary-item .value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.summary-item .unit {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.25rem;
+}
+
+.recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.recommendations-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.main-rec {
+  grid-column: 1 / -1;
+}
+
+.recommendations-card h3 {
+  font-size: 1.3rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.recommendation-item {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.recommendation-item:hover {
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+  transform: translateX(5px);
+}
+
+.rec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.rec-type {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.rec-target {
+  background: #667eea;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.rec-reason {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+.rec-suggestion {
+  color: #555;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 0.75rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+.nutrition-analysis {
+  margin-bottom: 1.5rem;
+}
+
+.analysis-item {
+  margin-bottom: 1.5rem;
+}
+
+.analysis-item .label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.analysis-item .value {
+  font-size: 1.8rem;
+  color: #667eea;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.bar {
+  width: 100%;
+  height: 10px;
+  background: #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.target {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.analysis-advice {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 1rem;
+  border-radius: 5px;
+  color: #856404;
+  line-height: 1.6;
+}
+
+.suggestions-section {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.suggestions-section h3 {
+  font-size: 1.3rem;
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.suggestions-section p {
+  color: #666;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.meal-suggestions-card {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-top: 4px solid #667eea;
+}
+
+.meal-suggestions-card h4 {
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.meal-suggestion-item {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.meal-suggestion-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.meal-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.meal-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.calories {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.benefit {
+  color: #999;
+}
+
+.refresh-section {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.refresh-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+@media (max-width: 768px) {
+  .recommendations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .main-rec {
+    grid-column: 1;
+  }
+
+  .rec-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .meals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* AI Recommendations Styles */
+.ai-recommendations {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.ai-text {
+  color: #333;
+  line-height: 1.8;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.ai-suggestions {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #667eea;
+}
+
+.suggestion-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stat-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.stat-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  color: #667eea;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* AI Chat Section */
+.ai-chat-section {
+  background: white;
+  border-radius: 10px;
+  padding: 2rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.ai-chat-section h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.chat-messages {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 1.5rem;
+  height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+}
+
+.chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.chat-message {
+  margin-bottom: 1rem;
+  animation: slideIn 0.3s ease;
+}
+
+.chat-message.user {
+  text-align: right;
+}
+
+.chat-message.user .message-content {
+  background: #667eea;
+  color: white;
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.chat-message.assistant .message-content {
+  background: #e8f4f8;
+  color: #333;
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.chat-message.error .message-content {
+  background: #ffe8e8;
+  color: #d32f2f;
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-textarea {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 150px;
+}
+
+.chat-textarea:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.chat-send-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
