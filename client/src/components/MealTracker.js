@@ -20,6 +20,11 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const [portionGrams, setPortionGrams] = useState(100);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoAnalysis, setPhotoAnalysis] = useState(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   const mealTypes = ['Kahvaltı', 'Ara Öğün', 'Öğle Yemeği', 'Ara Öğün 2', 'Akşam Yemeği'];
 
@@ -115,6 +120,89 @@ const MealTracker = ({ userId, onMealAdded }) => {
     }
   };
 
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Lütfen bir resim dosyası seçin.');
+      return;
+    }
+
+    if (file.size > 6 * 1024 * 1024) {
+      setPhotoError('Fotoğraf çok büyük. En fazla 6MB yükleyin.');
+      return;
+    }
+
+    setPhotoFile(file);
+    setPhotoError('');
+    setPhotoAnalysis(null);
+
+    const reader = new FileReader();
+    reader.onload = () => setPhotoPreview(String(reader.result || ''));
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzePhoto = async () => {
+    if (!photoFile || !photoPreview) {
+      setPhotoError('Önce bir fotoğraf seçin.');
+      return;
+    }
+
+    try {
+      setPhotoLoading(true);
+      setPhotoError('');
+
+      const [, base64Data] = photoPreview.split(',');
+      const response = await api.post('/api/food/analyze-image', {
+        image_base64: base64Data,
+        mime_type: photoFile.type,
+        hint_text: searchQuery || ''
+      });
+
+      setPhotoAnalysis(response.data);
+      if (response.data?.food_name) {
+        setSearchQuery(response.data.food_name);
+      }
+    } catch (error) {
+      const message = error?.response?.data?.error || 'Fotoğraf analiz edilemedi.';
+      setPhotoError(message);
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const handleAddPhotoEstimate = async () => {
+    if (!selectedMeal) {
+      alert('Lütfen önce bir yemek seçin');
+      return;
+    }
+
+    if (!photoAnalysis) return;
+
+    try {
+      setLoading(true);
+      await api.post(`/api/meals/${selectedMeal}/items`, {
+        food_name: `AI Fotoğraf: ${photoAnalysis.food_name}`,
+        calories: photoAnalysis.total_calories,
+        protein: parseFloat((photoAnalysis.protein || 0).toFixed(1)),
+        carbs: parseFloat((photoAnalysis.carbs || 0).toFixed(1)),
+        fat: parseFloat((photoAnalysis.fat || 0).toFixed(1)),
+        portion_size: `${photoAnalysis.estimated_grams}g (AI)`
+      });
+
+      fetchMeals();
+      onMealAdded();
+      setSuccessMessage('Fotoğraf analizi yemeğe eklendi!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error adding photo estimate to meal:', error);
+      setPhotoError('Fotoğraf sonucu eklenemedi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="meal-tracker">
       <div className="tracker-header">
@@ -179,6 +267,50 @@ const MealTracker = ({ userId, onMealAdded }) => {
               autoComplete="off"
             />
           </div>
+
+          <div className="photo-analyzer">
+            <label className="photo-upload-label">
+              <span>Ürün Fotoğrafı</span>
+              <input type="file" accept="image/*" onChange={handlePhotoSelect} />
+            </label>
+            {photoPreview && (
+              <div className="photo-preview-wrap">
+                <img src={photoPreview} alt="Yüklenen ürün" className="photo-preview" />
+                <button
+                  type="button"
+                  className="analyze-photo-btn"
+                  onClick={handleAnalyzePhoto}
+                  disabled={photoLoading}
+                >
+                  {photoLoading ? 'Analiz ediliyor...' : 'Fotoğrafı Analiz Et'}
+                </button>
+              </div>
+            )}
+            {photoError && <p className="photo-error">{photoError}</p>}
+          </div>
+
+          {photoAnalysis && (
+            <div className="photo-analysis-card">
+              <div className="photo-analysis-head">
+                <strong>{photoAnalysis.food_name}</strong>
+                <span>{photoAnalysis.confidence} güven</span>
+              </div>
+              <div className="photo-analysis-stats">
+                <div><b>{photoAnalysis.estimated_grams}g</b> tahmini porsiyon</div>
+                <div><b>{photoAnalysis.total_calories} kcal</b> toplam</div>
+                <div>P: {photoAnalysis.protein}g · K: {photoAnalysis.carbs}g · Y: {photoAnalysis.fat}g</div>
+              </div>
+              {photoAnalysis.notes && <p className="photo-analysis-notes">{photoAnalysis.notes}</p>}
+              <button
+                type="button"
+                className="add-photo-btn"
+                onClick={handleAddPhotoEstimate}
+                disabled={!selectedMeal || loading}
+              >
+                Yemeğe Ekle
+              </button>
+            </div>
+          )}
 
           <div className="food-suggestions">
             {searchQuery.length > 0 && foods.length === 0 && (

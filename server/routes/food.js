@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { all, get, run } = require('../database');
-const { getAIFoodSuggestion } = require('../geminiService');
+const { getAIFoodSuggestion, getAIFoodImageAnalysis } = require('../geminiService');
 
 const calcPortionNutrition = (food, grams) => {
   const multiplier = grams / 100;
@@ -79,6 +79,26 @@ router.get('/categories/list', async (req, res) => {
   try {
     const categories = await all('SELECT DISTINCT category FROM food_database ORDER BY category');
     res.json(categories.map(c => c.category));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/analyze-image', async (req, res) => {
+  try {
+    const { image_base64, mime_type, hint_text } = req.body;
+
+    if (!image_base64 || !mime_type) {
+      return res.status(400).json({ error: 'image_base64 and mime_type are required' });
+    }
+
+    const result = await getAIFoodImageAnalysis(image_base64, mime_type, hint_text || '');
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Image analysis failed' });
+    }
+
+    res.json(result.estimate);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

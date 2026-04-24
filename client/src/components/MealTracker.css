@@ -134,6 +134,104 @@
   margin-top: 1rem;
 }
 
+.photo-analyzer {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed #d8def0;
+  border-radius: 10px;
+  background: #fbfcff;
+}
+
+.photo-upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.photo-upload-label input {
+  width: 100%;
+  font: inherit;
+}
+
+.photo-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.photo-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e0e6f5;
+}
+
+.analyze-photo-btn,
+.add-photo-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.65rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.analyze-photo-btn:disabled,
+.add-photo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.photo-analysis-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 10px;
+  background: #f5f7ff;
+  border: 1px solid #dce3ff;
+}
+
+.photo-analysis-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.photo-analysis-head span {
+  color: #667eea;
+  font-weight: 700;
+}
+
+.photo-analysis-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #4a5568;
+  font-size: 0.92rem;
+}
+
+.photo-analysis-notes {
+  margin: 0.75rem 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.photo-error {
+  margin: 0.75rem 0 0;
+  color: #c53030;
+  font-size: 0.9rem;
+}
+
 .no-results {
   text-align: center;
   color: #999;

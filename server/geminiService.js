@@ -200,22 +200,18 @@ async function callGroq(prompt) {
   throw lastError || createApiError('groq', 500, 'No available Groq model');
 }
 
-async function callGemini(prompt) {
+async function callGeminiWithContents(contents, generationConfig = {}) {
   if (!GEMINI_API_KEY) {
     throw createApiError('gemini', 401, 'GEMINI_API_KEY not configured');
   }
 
   try {
     const response = await axios.post(`${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }]
-        }
-      ],
+      contents,
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2048
+        maxOutputTokens: 2048,
+        ...generationConfig
       }
     }, {
       headers: {
@@ -245,6 +241,34 @@ async function callGemini(prompt) {
     }
     throw error;
   }
+}
+
+async function callGemini(prompt) {
+  return callGeminiWithContents([
+    {
+      role: 'user',
+      parts: [{ text: prompt }]
+    }
+  ]);
+}
+
+async function callGeminiVision(prompt, imageBase64, mimeType) {
+  return callGeminiWithContents([
+    {
+      role: 'user',
+      parts: [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType,
+            data: imageBase64
+          }
+        }
+      ]
+    }
+  ], {
+    temperature: 0.2
+  });
 }
 
 function getProviderOrder() {
@@ -412,6 +436,77 @@ Rules:
     return {
       success: true,
       food: getFallbackFoodEstimate(searchTerm)
+    };
+  }
+}
+
+async function getAIFoodImageAnalysis(imageBase64, mimeType, hintText = '') {
+  try {
+    if (!GEMINI_API_KEY) {
+      return {
+        success: false,
+        error: 'GEMINI_API_KEY not configured'
+      };
+    }
+
+    const prompt = `You are a food photo nutrition estimator. Reply ONLY with valid JSON. No markdown, no explanation.
+
+Analyze the food photo and estimate the visible dish or product.
+
+Optional hint from the user: "${hintText || 'none'}"
+
+Return this exact JSON shape:
+{
+  "food_name": "string",
+  "estimated_grams": number,
+  "calories_per_100g": number,
+  "total_calories": number,
+  "protein": number,
+  "carbs": number,
+  "fat": number,
+  "confidence": "low|medium|high",
+  "notes": "string"
+}
+
+Rules:
+- Estimate the visible portion in grams as accurately as possible.
+- If multiple foods are visible, estimate the whole plate as one entry.
+- Keep numbers realistic for a diet tracker.
+- If the image is unclear, use a conservative estimate and lower confidence.
+- Output only JSON.`;
+
+    const text = await callGeminiVision(prompt, imageBase64, mimeType);
+    const parsed = extractJsonPayload(text);
+
+    if (!parsed || !parsed.food_name) {
+      return {
+        success: false,
+        error: 'Unable to parse image analysis result'
+      };
+    }
+
+    const estimatedGrams = Math.max(1, Math.round(Number(parsed.estimated_grams) || 100));
+    const caloriesPer100g = Math.max(0, Math.round(Number(parsed.calories_per_100g) || 0));
+    const totalCalories = Math.max(0, Math.round(Number(parsed.total_calories) || ((caloriesPer100g * estimatedGrams) / 100)));
+
+    return {
+      success: true,
+      estimate: {
+        food_name: String(parsed.food_name).trim(),
+        estimated_grams: estimatedGrams,
+        calories_per_100g: caloriesPer100g,
+        total_calories: totalCalories,
+        protein: Number(parsed.protein) || 0,
+        carbs: Number(parsed.carbs) || 0,
+        fat: Number(parsed.fat) || 0,
+        confidence: String(parsed.confidence || 'low'),
+        notes: String(parsed.notes || '').trim()
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
     };
   }
 }
@@ -694,5 +789,6 @@ module.exports = {
   getAIMealSuggestions,
   getAIAnalysis,
   getAIChatResponse,
-  getAIFoodSuggestion
+  getAIFoodSuggestion,
+  getAIFoodImageAnalysis
 };
