@@ -16,7 +16,10 @@ const GROQ_MODELS = (process.env.GROQ_MODELS || 'llama-3.1-8b-instant,llama3-8b-
   .split(',')
   .map((m) => m.trim())
   .filter(Boolean);
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+const GEMINI_MODELS = (process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || 'gemini-2.0-flash,gemini-2.0-flash-lite,gemini-1.5-flash-latest')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 const ORIGIN = process.env.OPENROUTER_ORIGIN || 'http://localhost:3000';
 const APP_NAME = process.env.OPENROUTER_APP_NAME || 'Diet Tracker App';
@@ -205,42 +208,56 @@ async function callGeminiWithContents(contents, generationConfig = {}) {
     throw createApiError('gemini', 401, 'GEMINI_API_KEY not configured');
   }
 
-  try {
-    const response = await axios.post(`${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
-      contents,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-        ...generationConfig
+  let lastError = null;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const response = await axios.post(`${GEMINI_API_URL}/${model}:generateContent?key=${GEMINI_API_KEY}`, {
+        contents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 2048,
+          ...generationConfig
+        }
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      const parts = response?.data?.candidates?.[0]?.content?.parts || [];
+      const text = parts.map((p) => p.text || '').join('\n').trim();
+      if (!text) {
+        throw createApiError('gemini', 500, `Empty response from model ${model}`);
       }
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
 
-    const parts = response?.data?.candidates?.[0]?.content?.parts || [];
-    const text = parts.map((p) => p.text || '').join('\n').trim();
-    if (!text) {
-      throw createApiError('gemini', 500, 'Empty response from Gemini');
-    }
+      console.log(`✅ Gemini success (${model})`);
+      return text;
+    } catch (error) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.error?.message || JSON.stringify(error.response.data);
+        const apiError = createApiError('gemini', status, message);
+        lastError = apiError;
 
-    console.log(`✅ Gemini success (${GEMINI_MODEL})`);
-    return text;
-  } catch (error) {
-    if (error.response) {
-      const status = error.response.status;
-      const message = error.response.data?.error?.message || JSON.stringify(error.response.data);
-      const apiError = createApiError('gemini', status, message);
+        if (status === 429) {
+          setProviderCooldown('gemini');
+          throw apiError;
+        }
 
-      if (status === 429) {
-        setProviderCooldown('gemini');
+        if (status === 404 || status === 400) {
+          continue;
+        }
+
+        throw apiError;
       }
-      throw apiError;
+
+      lastError = error;
     }
-    throw error;
   }
+
+  throw lastError || createApiError('gemini', 500, 'No available Gemini model');
 }
 
 async function callGemini(prompt) {
