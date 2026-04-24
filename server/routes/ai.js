@@ -25,6 +25,7 @@ const aiCache = {
 };
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const AI_DAILY_LIMIT = parseInt(process.env.AI_DAILY_LIMIT || '12', 10);
 
 function getCache(map, key) {
   const entry = map.get(key);
@@ -38,6 +39,58 @@ function getCache(map, key) {
 
 function setCache(map, key, data) {
   map.set(key, { data, timestamp: Date.now() });
+}
+
+function getTodayString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function getAiUsage(userId) {
+  const usageDate = getTodayString();
+  const row = await get('SELECT * FROM ai_usage WHERE user_id = ? AND usage_date = ?', [userId, usageDate]);
+  return row || { user_id: userId, usage_date: usageDate, request_count: 0 };
+}
+
+async function consumeAiQuota(userId) {
+  const usageDate = getTodayString();
+  const currentUsage = await getAiUsage(userId);
+
+  if ((currentUsage.request_count || 0) >= AI_DAILY_LIMIT) {
+    return {
+      allowed: false,
+      usage: currentUsage,
+      limit: AI_DAILY_LIMIT
+    };
+  }
+
+  if (currentUsage.id) {
+    await run(
+      `UPDATE ai_usage
+       SET request_count = request_count + 1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = ? AND usage_date = ?`,
+      [userId, usageDate]
+    );
+  } else {
+    await run(
+      `INSERT INTO ai_usage (user_id, usage_date, request_count)
+       VALUES (?, ?, 1)`,
+      [userId, usageDate]
+    );
+  }
+
+  return {
+    allowed: true,
+    usage: {
+      ...currentUsage,
+      request_count: (currentUsage.request_count || 0) + 1
+    },
+    limit: AI_DAILY_LIMIT
+  };
 }
 
 // Generate personalized AI recommendations using Gemini
@@ -55,6 +108,16 @@ router.post('/recommendations', async (req, res) => {
     const user = await get('SELECT * FROM users WHERE id = ?', [user_id]);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    const quota = await consumeAiQuota(user_id);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+        limit: quota.limit,
+        usedToday: quota.usage.request_count,
+        remainingToday: 0
+      });
     }
 
     // Get today's summary
@@ -179,6 +242,16 @@ router.get('/suggestions/:userId', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const quota = await consumeAiQuota(req.params.userId);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+        limit: quota.limit,
+        usedToday: quota.usage.request_count,
+        remainingToday: 0
+      });
+    }
+
     // Get today's consumption
     const today = getLocalDate();
     const summary = await get(
@@ -284,6 +357,16 @@ router.get('/analytics/:userId', async (req, res) => {
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    const quota = await consumeAiQuota(req.params.userId);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+        limit: quota.limit,
+        usedToday: quota.usage.request_count,
+        remainingToday: 0
+      });
     }
     
     const endDate = new Date();
@@ -426,6 +509,21 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'user_id and user_question are required' });
     }
 
+    const user = await get('SELECT * FROM users WHERE id = ?', [user_id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const quota = await consumeAiQuota(user_id);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
+        limit: quota.limit,
+        usedToday: quota.usage.request_count,
+        remainingToday: 0
+      });
+    }
+
     const aiResponse = await getAIChatResponse(user_question, {
       current_recommendations,
       current_suggestions,
@@ -438,10 +536,33 @@ router.post('/chat', async (req, res) => {
 
     res.json({
       response: aiResponse.response,
-      warning: ''
+      warning: '',
+      usage: quota.usage,
+      limit: quota.limit,
+      remainingToday: Math.max(0, quota.limit - quota.usage.request_count)
     });
   } catch (error) {
     console.error('Error processing chat:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/usage/:userId', async (req, res) => {
+  try {
+    const user = await get('SELECT * FROM users WHERE id = ?', [req.params.userId]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const usage = await getAiUsage(req.params.userId);
+    res.json({
+      limit: AI_DAILY_LIMIT,
+      usedToday: usage.request_count || 0,
+      remainingToday: Math.max(0, AI_DAILY_LIMIT - (usage.request_count || 0)),
+      usageDate: usage.usage_date || getTodayString()
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

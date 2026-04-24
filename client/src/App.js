@@ -6,18 +6,22 @@ import MealTracker from './components/MealTracker';
 import Recommendations from './components/Recommendations';
 import UserProfile from './components/UserProfile';
 import Analytics from './components/Analytics';
+import AuthScreen from './components/AuthScreen';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [authReady, setAuthReady] = useState(false);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [userId, setUserId] = useState(localStorage.getItem('userId'));
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dashboardRefresh, setDashboardRefresh] = useState(0);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (targetUserId = userId) => {
+    if (!targetUserId) return;
     try {
       setLoading(true);
-      const response = await api.get(`/api/user/${userId}`);
+      const response = await api.get(`/api/user/${targetUserId}`);
       setUser(response.data);
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -27,18 +31,58 @@ function App() {
   }, [userId]);
 
   useEffect(() => {
+    const loadSession = async () => {
+      if (!authToken) {
+        localStorage.removeItem('userId');
+        setUserId(null);
+        setAuthReady(true);
+        return;
+      }
+
+      try {
+        const response = await api.get('/api/auth/me');
+        const currentUser = response.data.user;
+        setUser(currentUser);
+        setUserId(String(currentUser.id));
+        localStorage.setItem('userId', String(currentUser.id));
+        localStorage.setItem('authToken', authToken);
+      } catch (error) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        setAuthToken(null);
+        setUserId(null);
+        setUser(null);
+      } finally {
+        setAuthReady(true);
+      }
+    };
+
+    loadSession();
+  }, [authToken]);
+
+  useEffect(() => {
     if (userId) {
       fetchUser();
     }
   }, [userId, fetchUser]);
 
-  const handleCreateUser = async (responseData) => {
+  const handleAuthSuccess = async (responseData) => {
     try {
       setLoading(true);
-      const newUserId = responseData.id;
-      setUserId(newUserId);
-      localStorage.setItem('userId', newUserId);
-      await fetchUser();
+      const newUserId = responseData.user?.id || responseData.id;
+      const token = responseData.token;
+
+      if (token) {
+        setAuthToken(token);
+        localStorage.setItem('authToken', token);
+      }
+
+      setUserId(String(newUserId));
+      localStorage.setItem('userId', String(newUserId));
+      if (responseData.user) {
+        setUser(responseData.user);
+      }
+      await fetchUser(newUserId);
     } catch (error) {
       console.error('Error creating user:', error);
     } finally {
@@ -46,8 +90,21 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    setAuthToken(null);
+    setUserId(null);
+    setUser(null);
+    setCurrentPage('dashboard');
+  };
+
+  if (!authReady) {
+    return <div className="loading">Oturum doğrulanıyor...</div>;
+  }
+
   if (!userId) {
-    return <UserProfile onUserCreated={handleCreateUser} />;
+    return <AuthScreen onSuccess={handleAuthSuccess} />;
   }
 
   if (loading) {
@@ -65,10 +122,7 @@ function App() {
           <span>{user?.name}</span>
           <button 
             className="logout-btn"
-            onClick={() => {
-              setUserId(null);
-              localStorage.removeItem('userId');
-            }}
+            onClick={handleLogout}
           >
             Çıkış
           </button>

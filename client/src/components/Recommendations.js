@@ -6,6 +6,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState(null);
+  const [usage, setUsage] = useState(null);
   const [error, setError] = useState('');
   const isFetchingRef = useRef(false);
 
@@ -15,6 +16,15 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
   const chatEndRef = useRef(null);
 
   const getCacheKey = useCallback((type) => `ai_${type}_${userId}`, [userId]);
+
+  const fetchUsage = useCallback(async () => {
+    try {
+      const response = await api.get(`/api/ai/usage/${userId}`);
+      setUsage(response.data);
+    } catch (error) {
+      console.error('Error fetching AI usage:', error);
+    }
+  }, [userId]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,6 +57,7 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
       });
 
       setChatMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
+      fetchUsage();
     } catch (error) {
       const errorMsg = error?.response?.data?.error || 'Yanıt alınamadı. Lütfen tekrar deneyin.';
       setChatMessages(prev => [...prev, { role: 'error', content: errorMsg }]);
@@ -150,8 +161,9 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
     setError('');
     await fetchRecommendations(forceRefresh);
     await fetchSuggestions(forceRefresh);
+    await fetchUsage();
     isFetchingRef.current = false;
-  }, [userId, fetchRecommendations, fetchSuggestions]);
+  }, [userId, fetchRecommendations, fetchSuggestions, fetchUsage]);
 
   useEffect(() => {
     loadData();
@@ -264,6 +276,14 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
             <p className="empty-state">Makro analiz hesaplanıyor...</p>
           )}
         </div>
+      </div>
+
+      <div className="ai-usage-panel">
+        <div>
+          <strong>AI Kullanım Kotası</strong>
+          <p>Bugün {usage?.usedToday || 0} / {usage?.limit || 12} istek kullanıldı.</p>
+        </div>
+        <div className="usage-badge">Kalan: {usage?.remainingToday ?? 12}</div>
       </div>
 
       {suggestions?.aiSuggestions && (

@@ -1,4 +1,4 @@
-const { db, all, run, get } = require('./database');
+const { usePostgres, run } = require('./database');
 
 // Comprehensive Turkish and International Food Database
 const FOOD_DATABASE = [
@@ -59,9 +59,14 @@ const FOOD_DATABASE = [
 const initializeFoodDatabase = async () => {
   try {
     for (const food of FOOD_DATABASE) {
+      const insertSql = usePostgres
+        ? `INSERT INTO food_database (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, description)
+           VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO NOTHING`
+        : `INSERT OR IGNORE INTO food_database (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, description)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
       await run(
-        `INSERT OR IGNORE INTO food_database (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, description)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        insertSql,
         [food.name, food.calories_per_100g, food.protein, food.carbs, food.fat, food.category, food.description]
       );
     }

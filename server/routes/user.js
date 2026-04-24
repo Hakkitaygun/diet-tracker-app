@@ -143,11 +143,14 @@ router.get('/:userId/dashboard', async (req, res) => {
       [req.params.userId, today]
     );
 
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+
     const weeklyData = await all(
       `SELECT * FROM daily_summary 
-       WHERE user_id = ? AND date BETWEEN date('now', '-7 days') AND date('now')
+       WHERE user_id = ? AND date BETWEEN ? AND ?
        ORDER BY date DESC`,
-      [req.params.userId]
+      [req.params.userId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
     );
 
     const recentMetrics = await all(
