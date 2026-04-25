@@ -18,6 +18,7 @@ const FOOD_DATABASE = [
   { name: 'Domates', calories_per_100g: 18, protein: 0.9, carbs: 3.9, fat: 0.2, category: 'Sebzeler', description: 'Taze domates' },
   { name: 'Salata', calories_per_100g: 15, protein: 1.2, carbs: 3, fat: 0.2, category: 'Sebzeler', description: 'Yeşil salata' },
   { name: 'Patates', calories_per_100g: 77, protein: 2, carbs: 17, fat: 0.1, category: 'Sebzeler', description: 'Pişmiş patates' },
+  { name: 'Patlıcan', calories_per_100g: 25, protein: 1, carbs: 6, fat: 0.2, category: 'Sebzeler', description: 'Pişmiş patlıcan' },
   { name: 'Havuç', calories_per_100g: 41, protein: 0.9, carbs: 10, fat: 0.2, category: 'Sebzeler', description: 'Taze havuç' },
   { name: 'Broccoli', calories_per_100g: 34, protein: 2.8, carbs: 7, fat: 0.4, category: 'Sebzeler', description: 'Pişmiş broccoli' },
   { name: 'Soğan', calories_per_100g: 40, protein: 1.1, carbs: 9, fat: 0.1, category: 'Sebzeler', description: 'Taze soğan' },
@@ -61,6 +62,7 @@ const FOOD_DATABASE = [
   { name: 'Yulaf ezmesi', calories_per_100g: 389, protein: 17, carbs: 66, fat: 7, category: 'Tahıllar', description: 'Çiğ yulaf ezmesi' },
   { name: 'Hindi göğsü', calories_per_100g: 135, protein: 29, carbs: 0, fat: 1.5, category: 'Et', description: 'Yağsız hindi göğsü' },
   { name: 'Ton balığı', calories_per_100g: 132, protein: 29, carbs: 0, fat: 1, category: 'Balık', description: 'Suda ton balığı' },
+  { name: 'Kıyma', calories_per_100g: 242, protein: 26, carbs: 0, fat: 15, category: 'Et', description: 'Az yağlı dana kıyma' },
 
   // Grain and legume options
   { name: 'Bulgur', calories_per_100g: 83, protein: 3.1, carbs: 18.6, fat: 0.2, category: 'Tahıllar', description: 'Pişmiş bulgur' },

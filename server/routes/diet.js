@@ -50,6 +50,35 @@ const foldForMatch = (value) => normalize(value)
   .replace(/ö/g, 'o')
   .replace(/ç/g, 'c');
 
+const DISH_INGREDIENT_HINTS = [
+  {
+    dishKeywords: ['karniyarik'],
+    ingredients: [
+      { name: 'Patlıcan', grams: 250 },
+      { name: 'Kıyma', grams: 120 },
+      { name: 'Domates', grams: 80 },
+      { name: 'Soğan', grams: 60 }
+    ]
+  },
+  {
+    dishKeywords: ['musakka'],
+    ingredients: [
+      { name: 'Patlıcan', grams: 220 },
+      { name: 'Kıyma', grams: 120 },
+      { name: 'Domates', grams: 80 },
+      { name: 'Soğan', grams: 60 }
+    ]
+  },
+  {
+    dishKeywords: ['menemen'],
+    ingredients: [
+      { name: 'Domates', grams: 120 },
+      { name: 'Yumurta', grams: 100 },
+      { name: 'Soğan', grams: 40 }
+    ]
+  }
+];
+
 const findCatalogKeyByName = (catalog, name) => {
   const query = normalize(name);
   const foldedQuery = foldForMatch(name);
@@ -101,6 +130,26 @@ const findCatalogKeyByName = (catalog, name) => {
 const getCatalogItemByName = (catalog, name) => {
   const key = findCatalogKeyByName(catalog, name);
   return key ? catalog[key] : null;
+};
+
+const expandDishToIngredients = (favoriteName, catalog) => {
+  const foldedFavorite = foldForMatch(favoriteName);
+  const matchedDish = DISH_INGREDIENT_HINTS.find((dish) =>
+    dish.dishKeywords.some((keyword) => foldedFavorite.includes(keyword))
+  );
+
+  if (!matchedDish) return [];
+
+  return matchedDish.ingredients
+    .map((ingredient) => {
+      const catalogItem = getCatalogItemByName(catalog, ingredient.name);
+      if (!catalogItem) return null;
+      return {
+        ...catalogItem,
+        _fallbackGrams: ingredient.grams
+      };
+    })
+    .filter(Boolean);
 };
 
 const getUser = async (userId) => get('SELECT * FROM users WHERE id = ?', [userId]);
@@ -440,6 +489,21 @@ const buildShoppingList = (weeklyPlan, prefs, catalog) => {
   });
 
   parseList(prefs?.favorite_foods).forEach((favoriteName) => {
+    const expanded = expandDishToIngredients(favoriteName, catalog);
+    expanded.forEach((catalogItem) => {
+      if (!banned.has(normalize(catalogItem.name))) {
+        addItem(
+          catalogItem,
+          catalogItem._fallbackGrams || 100,
+          Math.round((catalogItem.calories_per_100g || 0) * ((catalogItem._fallbackGrams || 100) / 100))
+        );
+      }
+    });
+
+    if (expanded.length > 0) {
+      return;
+    }
+
     const catalogItem = getCatalogItemByName(catalog, favoriteName);
     if (catalogItem && !banned.has(normalize(catalogItem.name))) {
       addItem(catalogItem, 100, Math.round((catalogItem.calories_per_100g || 0)));
