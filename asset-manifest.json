@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/diet-tracker-app/static/css/main.1ad64570.css",
-    "main.js": "/diet-tracker-app/static/js/main.4e16059c.js",
+    "main.js": "/diet-tracker-app/static/js/main.8936ba1b.js",
     "index.html": "/diet-tracker-app/index.html",
     "main.1ad64570.css.map": "/diet-tracker-app/static/css/main.1ad64570.css.map",
-    "main.4e16059c.js.map": "/diet-tracker-app/static/js/main.4e16059c.js.map"
+    "main.8936ba1b.js.map": "/diet-tracker-app/static/js/main.8936ba1b.js.map"
   },
   "entrypoints": [
     "static/css/main.1ad64570.css",
-    "static/js/main.4e16059c.js"
+    "static/js/main.8936ba1b.js"
   ]
 }
