@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { all, get, run } = require('../database');
+const { getAIDishIngredientSuggestions } = require('../geminiService');
 
 const WEEK_DAYS = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
@@ -468,7 +469,7 @@ const buildWeeklyPlan = (user, prefs, catalog) => {
   };
 };
 
-const buildShoppingList = (weeklyPlan, prefs, catalog) => {
+const buildShoppingList = async (weeklyPlan, prefs, catalog) => {
   const aggregated = new Map();
   const banned = new Set(parseList(prefs?.banned_foods).map(normalize));
 
@@ -488,7 +489,8 @@ const buildShoppingList = (weeklyPlan, prefs, catalog) => {
     });
   });
 
-  parseList(prefs?.favorite_foods).forEach((favoriteName) => {
+  const favorites = parseList(prefs?.favorite_foods);
+  for (const favoriteName of favorites) {
     const expanded = expandDishToIngredients(favoriteName, catalog);
     expanded.forEach((catalogItem) => {
       if (!banned.has(normalize(catalogItem.name))) {
@@ -501,14 +503,32 @@ const buildShoppingList = (weeklyPlan, prefs, catalog) => {
     });
 
     if (expanded.length > 0) {
-      return;
+      continue;
     }
 
     const catalogItem = getCatalogItemByName(catalog, favoriteName);
     if (catalogItem && !banned.has(normalize(catalogItem.name))) {
       addItem(catalogItem, 100, Math.round((catalogItem.calories_per_100g || 0)));
+      continue;
     }
-  });
+
+    const aiSuggestion = await getAIDishIngredientSuggestions(favoriteName);
+    if (aiSuggestion?.success && Array.isArray(aiSuggestion.ingredients)) {
+      aiSuggestion.ingredients.forEach((ingredient) => {
+        const aiCatalogItem = getCatalogItemByName(catalog, ingredient.name);
+        if (!aiCatalogItem || banned.has(normalize(aiCatalogItem.name))) {
+          return;
+        }
+
+        const grams = Math.max(30, Math.round(Number(ingredient.grams) || 100));
+        addItem(
+          aiCatalogItem,
+          grams,
+          Math.round((aiCatalogItem.calories_per_100g || 0) * (grams / 100))
+        );
+      });
+    }
+  }
 
   return Array.from(aggregated.entries())
     .map(([name, data]) => ({
@@ -531,7 +551,7 @@ router.get('/overview/:userId', async (req, res) => {
     const catalog = await loadCatalog();
     const programs = buildGoalPrograms(user, prefs);
     const weeklyPlan = buildWeeklyPlan(user, prefs, catalog);
-    const shoppingList = buildShoppingList(weeklyPlan, prefs, catalog);
+    const shoppingList = await buildShoppingList(weeklyPlan, prefs, catalog);
 
     res.json({
       user: {

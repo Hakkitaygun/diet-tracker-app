@@ -12,6 +12,7 @@ const FOOD_DATABASE = [
   { name: 'Beyaz ekmek', calories_per_100g: 265, protein: 9, carbs: 49, fat: 3.3, category: 'Tahıllar', description: 'Beyaz ekmek' },
   { name: 'Buğday ekmeği', calories_per_100g: 265, protein: 9, carbs: 49, fat: 3.3, category: 'Tahıllar', description: 'Tam buğday ekmeği' },
   { name: 'Pirinç', calories_per_100g: 130, protein: 2.7, carbs: 28, fat: 0.3, category: 'Tahıllar', description: 'Pişmiş pirinç' },
+  { name: 'Buğday', calories_per_100g: 111, protein: 4.5, carbs: 23, fat: 0.4, category: 'Tahıllar', description: 'Haşlanmış buğday' },
   { name: 'Makarna', calories_per_100g: 131, protein: 5, carbs: 25, fat: 1.1, category: 'Tahıllar', description: 'Pişmiş makarna' },
   
   // Vegetables

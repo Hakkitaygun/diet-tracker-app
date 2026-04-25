@@ -469,6 +469,118 @@ function getFallbackFoodEstimate(searchTerm) {
   };
 }
 
+function getFallbackDishIngredients(dishName) {
+  const query = String(dishName || '').toLowerCase();
+  const fallbackMap = [
+    {
+      match: ['keskek', 'keşkek'],
+      ingredients: [
+        { name: 'Buğday', grams: 120 },
+        { name: 'Tavuk göğsü', grams: 120 },
+        { name: 'Soğan', grams: 50 }
+      ]
+    },
+    {
+      match: ['karniyarik', 'karnıyarık'],
+      ingredients: [
+        { name: 'Patlıcan', grams: 250 },
+        { name: 'Kıyma', grams: 120 },
+        { name: 'Domates', grams: 80 }
+      ]
+    },
+    {
+      match: ['pilav'],
+      ingredients: [
+        { name: 'Pirinç', grams: 120 }
+      ]
+    }
+  ];
+
+  const found = fallbackMap.find((item) => item.match.some((needle) => query.includes(needle)));
+  if (found) {
+    return found.ingredients;
+  }
+
+  return [
+    { name: String(dishName || 'Karışık yemek').trim(), grams: 100 }
+  ];
+}
+
+async function getAIDishIngredientSuggestions(dishName) {
+  try {
+    const normalizedDish = String(dishName || '').trim();
+    if (!normalizedDish) {
+      return { success: false, error: 'dishName is required', ingredients: [] };
+    }
+
+    if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
+      return {
+        success: true,
+        ingredients: getFallbackDishIngredients(normalizedDish),
+        source: 'fallback'
+      };
+    }
+
+    const prompt = `You are a Turkish dietitian assistant. Reply ONLY with valid JSON. No markdown, no explanation.
+
+Dish name: "${normalizedDish}"
+
+Return exact JSON shape:
+{
+  "ingredients": [
+    { "name": "string", "grams": number }
+  ],
+  "confidence": "low|medium|high"
+}
+
+Rules:
+- Provide 2 to 5 common ingredients for this dish used in Turkey.
+- Use practical shopping amounts in grams.
+- Ingredient names should be generic grocery items.
+- Output only JSON.`;
+
+    const text = await callAIWithFallback(prompt);
+    const parsed = extractJsonPayload(text);
+
+    if (!parsed || !Array.isArray(parsed.ingredients) || parsed.ingredients.length === 0) {
+      return {
+        success: true,
+        ingredients: getFallbackDishIngredients(normalizedDish),
+        source: 'fallback'
+      };
+    }
+
+    const ingredients = parsed.ingredients
+      .map((item) => ({
+        name: String(item?.name || '').trim(),
+        grams: Math.max(30, Math.round(Number(item?.grams) || 100))
+      }))
+      .filter((item) => Boolean(item.name))
+      .slice(0, 6);
+
+    if (ingredients.length === 0) {
+      return {
+        success: true,
+        ingredients: getFallbackDishIngredients(normalizedDish),
+        source: 'fallback'
+      };
+    }
+
+    return {
+      success: true,
+      ingredients,
+      confidence: String(parsed.confidence || 'medium'),
+      source: 'ai'
+    };
+  } catch (error) {
+    return {
+      success: true,
+      ingredients: getFallbackDishIngredients(dishName),
+      source: 'fallback'
+    };
+  }
+}
+
 async function getAIFoodSuggestion(searchTerm) {
   try {
     if (!searchTerm || !String(searchTerm).trim()) {
@@ -973,5 +1085,6 @@ module.exports = {
   getAIAnalysis,
   getAIChatResponse,
   getAIFoodSuggestion,
-  getAIFoodImageAnalysis
+  getAIFoodImageAnalysis,
+  getAIDishIngredientSuggestions
 };
