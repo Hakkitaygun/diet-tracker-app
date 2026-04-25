@@ -42,19 +42,57 @@ const calcPortionNutrition = (food, grams) => {
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
+const foldForMatch = (value) => normalize(value)
+  .replace(/ı/g, 'i')
+  .replace(/ğ/g, 'g')
+  .replace(/ü/g, 'u')
+  .replace(/ş/g, 's')
+  .replace(/ö/g, 'o')
+  .replace(/ç/g, 'c');
+
 const findCatalogKeyByName = (catalog, name) => {
   const query = normalize(name);
+  const foldedQuery = foldForMatch(name);
   if (!query) return null;
   if (catalog[query]) return query;
 
   const keys = Object.keys(catalog);
+  const foldedKeys = keys.map((key) => ({
+    key,
+    folded: foldForMatch(key)
+  }));
+
+  const foldedExact = foldedKeys.find((entry) => entry.folded === foldedQuery);
+  if (foldedExact) return foldedExact.key;
+
   const directContains = keys.find((key) => query.includes(key) || key.includes(query));
   if (directContains) return directContains;
 
+  const foldedContains = foldedKeys.find(
+    (entry) => foldedQuery.includes(entry.folded) || entry.folded.includes(foldedQuery)
+  );
+  if (foldedContains) return foldedContains.key;
+
+  // Common Turkish meal naming shortcut: "pilav" should prefer rice-like catalog items.
+  if (foldedQuery.includes('pilav')) {
+    const pilavPreferred = foldedKeys.find(
+      (entry) => entry.folded.includes('pirinc') || entry.folded.includes('bulgur')
+    );
+    if (pilavPreferred) return pilavPreferred.key;
+  }
+
   const tokens = query.split(/\s+/).filter((token) => token.length >= 3);
+  const foldedTokens = foldedQuery.split(/\s+/).filter((token) => token.length >= 3);
   for (const token of tokens) {
     const tokenMatch = keys.find((key) => key === token || key.includes(token) || token.includes(key));
     if (tokenMatch) return tokenMatch;
+  }
+
+  for (const token of foldedTokens) {
+    const tokenMatch = foldedKeys.find(
+      (entry) => entry.folded === token || entry.folded.includes(token) || token.includes(entry.folded)
+    );
+    if (tokenMatch) return tokenMatch.key;
   }
 
   return null;
