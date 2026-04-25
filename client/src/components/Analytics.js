@@ -12,6 +12,11 @@ const Analytics = ({ userId }) => {
     fetchAnalytics();
   }, [userId, days]);
 
+  const getAverageValue = (key) => {
+    if (!analytics?.average) return 0;
+    return analytics.average[key] ?? analytics.average[`avg_${key}`] ?? 0;
+  };
+
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
@@ -32,7 +37,7 @@ const Analytics = ({ userId }) => {
     return <div className="error">İstatistikler yüklenemedi</div>;
   }
 
-  const chartData = analytics.daily.reverse();
+  const chartData = [...analytics.daily].reverse();
 
   return (
     <div className="analytics">
@@ -63,22 +68,22 @@ const Analytics = ({ userId }) => {
       <div className="analytics-summary">
         <div className="summary-card">
           <div className="card-label">Ortalama Günlük Kalori</div>
-          <div className="card-value">{analytics.average.calories}</div>
+          <div className="card-value">{getAverageValue('calories')}</div>
           <div className="card-unit">kcal</div>
         </div>
         <div className="summary-card">
           <div className="card-label">Ortalama Protein</div>
-          <div className="card-value">{analytics.average.protein}</div>
+          <div className="card-value">{getAverageValue('protein')}</div>
           <div className="card-unit">g</div>
         </div>
         <div className="summary-card">
           <div className="card-label">Ortalama Karbohidrat</div>
-          <div className="card-value">{analytics.average.carbs}</div>
+          <div className="card-value">{getAverageValue('carbs')}</div>
           <div className="card-unit">g</div>
         </div>
         <div className="summary-card">
           <div className="card-label">Ortalama Yağ</div>
-          <div className="card-value">{analytics.average.fat}</div>
+          <div className="card-value">{getAverageValue('fat')}</div>
           <div className="card-unit">g</div>
         </div>
       </div>
@@ -162,7 +167,7 @@ const Analytics = ({ userId }) => {
             <div className="trend-icon">💪</div>
             <div className="trend-content">
               <div className="trend-title">Protein Alımı</div>
-              <div className="trend-value">{analytics.average.protein}g/gün</div>
+              <div className="trend-value">{getAverageValue('protein')}g/gün</div>
               <div className="trend-change">Hedef: 50-100g</div>
             </div>
           </div>
@@ -170,7 +175,7 @@ const Analytics = ({ userId }) => {
             <div className="trend-icon">🌾</div>
             <div className="trend-content">
               <div className="trend-title">Karbohidrat</div>
-              <div className="trend-value">{analytics.average.carbs}g/gün</div>
+              <div className="trend-value">{getAverageValue('carbs')}g/gün</div>
               <div className="trend-change">Hedef: 225-325g</div>
             </div>
           </div>
@@ -178,7 +183,7 @@ const Analytics = ({ userId }) => {
             <div className="trend-icon">🌿</div>
             <div className="trend-content">
               <div className="trend-title">Yağ Alımı</div>
-              <div className="trend-value">{analytics.average.fat}g/gün</div>
+              <div className="trend-value">{getAverageValue('fat')}g/gün</div>
               <div className="trend-change">Hedef: 50-75g</div>
             </div>
           </div>
@@ -197,10 +202,10 @@ const Analytics = ({ userId }) => {
           <div className="insight-item">
             <div className="insight-icon">✓</div>
             <div className="insight-text">
-              Günlük ortalama <strong>{analytics.average.calories} kcal</strong> tüketiyorsunuz
+              Günlük ortalama <strong>{getAverageValue('calories')} kcal</strong> tüketiyorsunuz
             </div>
           </div>
-          {analytics.average.protein >= 50 && (
+          {getAverageValue('protein') >= 50 && (
             <div className="insight-item">
               <div className="insight-icon">✓</div>
               <div className="insight-text">
@@ -208,7 +213,7 @@ const Analytics = ({ userId }) => {
               </div>
             </div>
           )}
-          {analytics.average.calories < 1500 && (
+          {getAverageValue('calories') < 1500 && (
             <div className="insight-item warning">
               <div className="insight-icon">⚠️</div>
               <div className="insight-text">

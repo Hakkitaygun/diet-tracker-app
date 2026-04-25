@@ -140,6 +140,61 @@ async function getDietPreferencesSnapshot(userId) {
   ].join(' | ');
 }
 
+function buildFallbackRecommendations(user, dailyCalories, dailyProtein, dailyCarbs, dailyFat, remainingCalories) {
+  const goal = user?.goal || 'balanced';
+  const goalLabel = goal === 'weight_loss' ? 'Kilo verme' : goal === 'muscle_gain' ? 'Kas kazanma' : 'Dengeli beslenme';
+
+  return {
+    success: true,
+    recommendations: [
+      'Durum Ozeti',
+      `- Hedef: ${goalLabel}`,
+      `- Tuketilen: ${Math.round(dailyCalories)} kcal`,
+      `- Kalan hedef: ${Math.round(Math.max(0, remainingCalories))} kcal`,
+      '',
+      'Bugun Icın Net Oneriler',
+      '- 1 porsiyon protein ekle: tavuk, yumurta, yogurt veya ton baligi',
+      '- 1 porsiyon kompleks karbonhidrat ekle: bulgur, yulaf veya tam tahil ekmegi',
+      '- Tabagin yarisini sebze ile doldur',
+      '',
+      'Makro Notu',
+      `- Protein: ${Math.round(dailyProtein)}g | Karb: ${Math.round(dailyCarbs)}g | Yag: ${Math.round(dailyFat)}g`
+    ].join('\n')
+  };
+}
+
+function buildFallbackAnalyticsAnalysis(user, average) {
+  const goal = user?.goal || 'balanced';
+  const calorieGoal = user?.daily_calorie_goal || 2000;
+  const dailyCalories = Math.round(average.calories || average.avg_calories || 0);
+  const dailyProtein = Math.round(average.protein || average.avg_protein || 0);
+  const dailyCarbs = Math.round(average.carbs || average.avg_carbs || 0);
+  const dailyFat = Math.round(average.fat || average.avg_fat || 0);
+
+  return {
+    success: true,
+    analysis: [
+      'Genel Durum',
+      `- Gunluk ortalama kalori: ${dailyCalories} kcal`,
+      `- Hedefe gore durum: ${dailyCalories > calorieGoal ? 'biraz ustunde' : 'kontrollu'}`,
+      '',
+      'Guclu Yonler',
+      '- Besin kaydini duzenli tutuyorsun',
+      '- Protein takibi yapman iyi bir aliskanlik',
+      '',
+      'Gelistirme Onerileri',
+      goal === 'weight_loss'
+        ? '- Sebze ve protein agirligini artir, sekerli atistirmalari azalt'
+        : '- Protein dagilimini gun icine yay, ara ogunleri dengeli tut',
+      '- Su alimini ve ogun saatlerini daha duzenli takip et',
+      '- Haftalik ayni saatte tartilma ile trendi takip et',
+      '',
+      'Makro Dengesi',
+      `- Protein: ${dailyProtein}g, Karb: ${dailyCarbs}g, Yag: ${dailyFat}g`
+    ].join('\n')
+  };
+}
+
 // Generate personalized AI recommendations using Gemini
 router.post('/recommendations', async (req, res) => {
   try {
@@ -185,69 +240,58 @@ router.post('/recommendations', async (req, res) => {
     if (!aiRecommendations) {
       const quota = await consumeAiQuota(user_id);
       if (!quota.allowed) {
-        return res.status(429).json({
-          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-          limit: quota.limit,
-          usedToday: quota.usage.request_count,
-          remainingToday: 0
-        });
-      }
+        aiRecommendations = buildFallbackRecommendations(user, dailyCalories, dailyProtein, dailyCarbs, dailyFat, remainingCalories);
+        warning = `AI günlük limit doldu (${quota.limit}). Kural tabanlı tavsiye gösteriliyor.`;
+        setCache(aiCache.recommendations, cacheKey, aiRecommendations);
+      } else {
+        try {
+          aiRecommendations = await getAIDietRecommendations(
+            user_id,
+            user,
+            {
+              total_calories: dailyCalories,
+              total_protein: dailyProtein,
+              total_carbs: dailyCarbs,
+              total_fat: dailyFat
+            },
+            { availableFoodCatalog, dietPreferences }
+          );
 
-      try {
-        aiRecommendations = await getAIDietRecommendations(
-          user_id,
-          user,
-          {
-            total_calories: dailyCalories,
-            total_protein: dailyProtein,
-            total_carbs: dailyCarbs,
-            total_fat: dailyFat
-          },
-          { availableFoodCatalog, dietPreferences }
-        );
+          if (aiRecommendations?.success === false) {
+            const serviceMessage = String(aiRecommendations.error || '').toLowerCase();
+            const isRateLimited = serviceMessage.includes('429') || serviceMessage.includes('rate limit');
 
-        if (aiRecommendations?.success === false) {
-          const serviceMessage = String(aiRecommendations.error || '').toLowerCase();
-          const isRateLimited = serviceMessage.includes('429') || serviceMessage.includes('rate limit');
-
-          if (isRateLimited) {
-            if (cached) {
-              aiRecommendations = cached;
-              warning = 'Rate limit doldu. Onceki tavsiye gosteriliyor.';
+            if (isRateLimited) {
+              if (cached) {
+                aiRecommendations = cached;
+                warning = 'Rate limit doldu. Onceki tavsiye gosteriliyor.';
+              } else {
+                aiRecommendations = buildFallbackRecommendations(user, dailyCalories, dailyProtein, dailyCarbs, dailyFat, remainingCalories);
+                warning = 'AI oran sinirlamasi. Kural tabanli tavsiye gosteriliyor.';
+              }
             } else {
-              aiRecommendations = {
-                success: true,
-                recommendations: '⏳ AI yogun. Kisa bir sure sonra tekrar dene. Bu arada protein odakli bir ana ogun + kompleks karbonhidrat + salata ekleyebilirsin.'
-              };
-              warning = 'API oran sinirlamasi. Gecici tavsiye gosteriliyor.';
+              aiRecommendations = buildFallbackRecommendations(user, dailyCalories, dailyProtein, dailyCarbs, dailyFat, remainingCalories);
+              warning = 'AI servisi gecici olarak kullanilamiyor. Kural tabanli tavsiye gosteriliyor.';
+            }
+          }
+
+          setCache(aiCache.recommendations, cacheKey, aiRecommendations);
+        } catch (error) {
+          // Handle rate limit error with cache fallback
+          const is429Error = error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('rate limit');
+          if (is429Error) {
+            if (cached) {
+              // Use cached data if available
+              aiRecommendations = cached;
+              warning = 'Rate limit doldu. Önceki tavsiye gösteriliyor.';
+            } else {
+              // Return friendly fallback if no cache
+              aiRecommendations = buildFallbackRecommendations(user, dailyCalories, dailyProtein, dailyCarbs, dailyFat, remainingCalories);
+              warning = 'API oran sınırlaması. Kural tabanlı tavsiye gösteriliyor.';
             }
           } else {
-            aiRecommendations = {
-              success: true,
-              recommendations: 'AI servisi gecici olarak ulasilamaz. Bugun hedefe yaklasmak icin: 1) Protein kaynagi ekle 2) 1 porsiyon kompleks karbonhidrat ekle 3) Sekerli iceceklerden kacin.'
-            };
-            warning = 'AI servisi gecici olarak kullanilamiyor. Gecici tavsiye gosteriliyor.';
+            throw error;
           }
-        }
-
-        setCache(aiCache.recommendations, cacheKey, aiRecommendations);
-      } catch (error) {
-        // Handle rate limit error with cache fallback
-        const is429Error = error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('rate limit');
-        if (is429Error) {
-          if (cached) {
-            // Use cached data if available
-            aiRecommendations = cached;
-            warning = 'Rate limit doldu. Önceki tavsiye gösteriliyor.';
-          } else {
-            // Return friendly error message if no cache
-            aiRecommendations = {
-              recommendations: '⏳ AI henüz önerileri hazırlamadı. Lütfen 1-2 dakika bekleyip tekrar deneyin. (Oran sınırlaması)'
-            };
-            warning = 'API oran sınırlaması. Bir süre sonra tekrar deneyin.';
-          }
-        } else {
-          throw error;
         }
       }
     }
@@ -315,32 +359,57 @@ router.get('/suggestions/:userId', async (req, res) => {
     if (!aiSuggestions) {
       const quota = await consumeAiQuota(req.params.userId);
       if (!quota.allowed) {
-        return res.status(429).json({
-          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-          limit: quota.limit,
-          usedToday: quota.usage.request_count,
-          remainingToday: 0
-        });
-      }
+        aiSuggestions = {
+          success: true,
+          suggestions: buildFallbackMealSuggestions(user, dailyCalories, remainingCalories)
+        };
+        warning = `AI günlük limit doldu (${quota.limit}). Kural tabanlı öneriler gösteriliyor.`;
+        setCache(aiCache.suggestions, cacheKey, aiSuggestions);
+      } else {
+        try {
+          aiSuggestions = await getAIMealSuggestions(
+            req.params.userId,
+            user,
+            dailyCalories,
+            remainingCalories,
+            { availableFoodCatalog, dietPreferences }
+          );
 
-      try {
-        aiSuggestions = await getAIMealSuggestions(
-          req.params.userId,
-          user,
-          dailyCalories,
-          remainingCalories,
-          { availableFoodCatalog, dietPreferences }
-        );
+          if (aiSuggestions?.success === false) {
+            const serviceMessage = String(aiSuggestions.error || '').toLowerCase();
+            const isRateLimited = serviceMessage.includes('429') || serviceMessage.includes('rate limit');
 
-        if (aiSuggestions?.success === false) {
-          const serviceMessage = String(aiSuggestions.error || '').toLowerCase();
-          const isRateLimited = serviceMessage.includes('429') || serviceMessage.includes('rate limit');
+            if (isRateLimited) {
+              if (cached) {
+                aiSuggestions = cached;
+                warning = 'Rate limit doldu. Önceki öneriler gösteriliyor.';
+              } else {
+                aiSuggestions = {
+                  success: true,
+                  suggestions: buildFallbackMealSuggestions(user, dailyCalories, remainingCalories)
+                };
+                warning = 'API oran sınırlaması. Geçici öneriler gösteriliyor.';
+              }
+            } else {
+              aiSuggestions = {
+                success: true,
+                suggestions: buildFallbackMealSuggestions(user, dailyCalories, remainingCalories)
+              };
+              warning = 'AI servisi geçici olarak kullanılamıyor. Geçici öneriler gösteriliyor.';
+            }
+          }
 
-          if (isRateLimited) {
+          setCache(aiCache.suggestions, cacheKey, aiSuggestions);
+        } catch (error) {
+          // Handle rate limit error with cache fallback
+          const is429Error = error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('rate limit');
+          if (is429Error) {
             if (cached) {
+              // Use cached data if available
               aiSuggestions = cached;
               warning = 'Rate limit doldu. Önceki öneriler gösteriliyor.';
             } else {
+              // Return friendly fallback if no cache
               aiSuggestions = {
                 success: true,
                 suggestions: buildFallbackMealSuggestions(user, dailyCalories, remainingCalories)
@@ -348,32 +417,8 @@ router.get('/suggestions/:userId', async (req, res) => {
               warning = 'API oran sınırlaması. Geçici öneriler gösteriliyor.';
             }
           } else {
-            aiSuggestions = {
-              success: true,
-              suggestions: buildFallbackMealSuggestions(user, dailyCalories, remainingCalories)
-            };
-            warning = 'AI servisi geçici olarak kullanılamıyor. Geçici öneriler gösteriliyor.';
+            throw error;
           }
-        }
-
-        setCache(aiCache.suggestions, cacheKey, aiSuggestions);
-      } catch (error) {
-        // Handle rate limit error with cache fallback
-        const is429Error = error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('rate limit');
-        if (is429Error) {
-          if (cached) {
-            // Use cached data if available
-            aiSuggestions = cached;
-            warning = 'Rate limit doldu. Önceki öneriler gösteriliyor.';
-          } else {
-            // Return friendly error message if no cache
-            aiSuggestions = {
-              suggestions: '⏳ AI henüz öneriler hazırlamadı. Lütfen 1-2 dakika bekleyip tekrar deneyin. (Oran sınırlaması)'
-            };
-            warning = 'API oran sınırlaması. Bir süre sonra tekrar deneyin.';
-          }
-        } else {
-          throw error;
         }
       }
     }
@@ -435,32 +480,30 @@ router.get('/analytics/:userId', async (req, res) => {
     if (!aiAnalysis) {
       const quota = await consumeAiQuota(req.params.userId);
       if (!quota.allowed) {
-        return res.status(429).json({
-          error: `AI günlük limit doldu (${quota.limit}). Yarın tekrar deneyin.`,
-          limit: quota.limit,
-          usedToday: quota.usage.request_count,
-          remainingToday: 0
-        });
-      }
-
-      try {
-        aiAnalysis = await getAIAnalysis(
-          req.params.userId,
-          user,
-          average,
-          { availableFoodCatalog, dietPreferences }
-        );
+        aiAnalysis = buildFallbackAnalyticsAnalysis(user, average);
+        warning = `AI günlük limit doldu (${quota.limit}). Kural tabanlı analiz gösteriliyor.`;
         setCache(aiCache.analytics, cacheKey, aiAnalysis);
-      } catch (error) {
-        if (cached && error?.message?.includes('429')) {
-          aiAnalysis = cached;
-          warning = 'Rate limit doldu. Onceki analiz gosteriliyor.';
-        } else {
-          throw error;
+      } else {
+        try {
+          aiAnalysis = await getAIAnalysis(
+            req.params.userId,
+            user,
+            average,
+            { availableFoodCatalog, dietPreferences }
+          );
+          setCache(aiCache.analytics, cacheKey, aiAnalysis);
+        } catch (error) {
+          if (cached && error?.message?.includes('429')) {
+            aiAnalysis = cached;
+            warning = 'Rate limit doldu. Onceki analiz gosteriliyor.';
+          } else {
+            aiAnalysis = buildFallbackAnalyticsAnalysis(user, average);
+            warning = 'AI servisi gecici olarak kullanilamiyor. Kural tabanli analiz gosteriliyor.';
+          }
         }
       }
-    }
 
+    }
     res.json({
       period: {
         start: startDate.toISOString().split('T')[0],
@@ -487,7 +530,11 @@ function calculateAverages(analytics) {
       avg_calories: 0,
       avg_protein: 0,
       avg_carbs: 0,
-      avg_fat: 0
+      avg_fat: 0,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0
     };
   }
 
@@ -502,7 +549,11 @@ function calculateAverages(analytics) {
     avg_calories: sum.calories / analytics.length,
     avg_protein: sum.protein / analytics.length,
     avg_carbs: sum.carbs / analytics.length,
-    avg_fat: sum.fat / analytics.length
+    avg_fat: sum.fat / analytics.length,
+    calories: sum.calories / analytics.length,
+    protein: sum.protein / analytics.length,
+    carbs: sum.carbs / analytics.length,
+    fat: sum.fat / analytics.length
   };
 }
 
@@ -521,7 +572,7 @@ function calculateTrends(analytics) {
   const olderAvg = older.reduce((sum, day) => sum + (day.total_calories || 0), 0) / older.length;
 
   const difference = recentAvg - olderAvg;
-  const percentChange = ((difference / olderAvg) * 100).toFixed(1);
+  const percentChange = olderAvg > 0 ? ((difference / olderAvg) * 100).toFixed(1) : '0.0';
 
   return {
     caloriesTrend: Math.abs(difference) < 100 ? 'stable' : difference > 0 ? 'increasing' : 'decreasing',
