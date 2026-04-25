@@ -299,9 +299,15 @@ const Recommendations = ({ userId, refreshKey = 0 }) => {
       <div className="ai-usage-panel">
         <div>
           <strong>AI Kullanım Kotası</strong>
-          <p>Bugün {usage?.usedToday || 0} / {usage?.limit || 12} istek kullanıldı.</p>
+          <p>
+            {usage?.unlimited
+              ? 'Bugün sınırsız AI kullanımı açık.'
+              : `Bugün ${usage?.usedToday || 0} / ${usage?.limit || 12} istek kullanıldı.`}
+          </p>
         </div>
-        <div className="usage-badge">Kalan: {usage?.remainingToday ?? 12}</div>
+        <div className="usage-badge">
+          {usage?.unlimited ? 'Sınırsız' : `Kalan: ${usage?.remainingToday ?? 12}`}
+        </div>
       </div>
 
       {suggestions?.aiSuggestions && (

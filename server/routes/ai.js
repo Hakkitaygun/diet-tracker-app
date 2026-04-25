@@ -25,7 +25,8 @@ const aiCache = {
 };
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const AI_DAILY_LIMIT = parseInt(process.env.AI_DAILY_LIMIT || '12', 10);
+const AI_QUOTA_ENABLED = String(process.env.AI_QUOTA_ENABLED || 'false').toLowerCase() === 'true';
+const AI_DAILY_LIMIT = AI_QUOTA_ENABLED ? parseInt(process.env.AI_DAILY_LIMIT || '12', 10) : null;
 
 function getCache(map, key) {
   const entry = map.get(key);
@@ -56,6 +57,15 @@ async function getAiUsage(userId) {
 }
 
 async function consumeAiQuota(userId) {
+  if (!AI_QUOTA_ENABLED) {
+    return {
+      allowed: true,
+      usage: { user_id: userId, usage_date: getTodayString(), request_count: 0 },
+      limit: null,
+      unlimited: true
+    };
+  }
+
   const usageDate = getTodayString();
   const currentUsage = await getAiUsage(userId);
 
@@ -63,7 +73,8 @@ async function consumeAiQuota(userId) {
     return {
       allowed: false,
       usage: currentUsage,
-      limit: AI_DAILY_LIMIT
+      limit: AI_DAILY_LIMIT,
+      unlimited: false
     };
   }
 
@@ -89,7 +100,8 @@ async function consumeAiQuota(userId) {
       ...currentUsage,
       request_count: (currentUsage.request_count || 0) + 1
     },
-    limit: AI_DAILY_LIMIT
+    limit: AI_DAILY_LIMIT,
+    unlimited: false
   };
 }
 
@@ -656,7 +668,8 @@ router.post('/chat', async (req, res) => {
       warning: '',
       usage: quota.usage,
       limit: quota.limit,
-      remainingToday: Math.max(0, quota.limit - quota.usage.request_count)
+      remainingToday: quota.limit == null ? null : Math.max(0, quota.limit - quota.usage.request_count),
+      unlimited: quota.unlimited || quota.limit == null
     });
   } catch (error) {
     console.error('Error processing chat:', error);
@@ -675,9 +688,10 @@ router.get('/usage/:userId', async (req, res) => {
     const usage = await getAiUsage(req.params.userId);
     res.json({
       limit: AI_DAILY_LIMIT,
-      usedToday: usage.request_count || 0,
-      remainingToday: Math.max(0, AI_DAILY_LIMIT - (usage.request_count || 0)),
-      usageDate: usage.usage_date || getTodayString()
+      usedToday: AI_QUOTA_ENABLED ? (usage.request_count || 0) : 0,
+      remainingToday: AI_QUOTA_ENABLED ? Math.max(0, AI_DAILY_LIMIT - (usage.request_count || 0)) : null,
+      usageDate: usage.usage_date || getTodayString(),
+      unlimited: !AI_QUOTA_ENABLED
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
