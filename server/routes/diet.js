@@ -42,7 +42,28 @@ const calcPortionNutrition = (food, grams) => {
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
-const getCatalogItemByName = (catalog, name) => catalog[normalize(name)] || null;
+const findCatalogKeyByName = (catalog, name) => {
+  const query = normalize(name);
+  if (!query) return null;
+  if (catalog[query]) return query;
+
+  const keys = Object.keys(catalog);
+  const directContains = keys.find((key) => query.includes(key) || key.includes(query));
+  if (directContains) return directContains;
+
+  const tokens = query.split(/\s+/).filter((token) => token.length >= 3);
+  for (const token of tokens) {
+    const tokenMatch = keys.find((key) => key === token || key.includes(token) || token.includes(key));
+    if (tokenMatch) return tokenMatch;
+  }
+
+  return null;
+};
+
+const getCatalogItemByName = (catalog, name) => {
+  const key = findCatalogKeyByName(catalog, name);
+  return key ? catalog[key] : null;
+};
 
 const getUser = async (userId) => get('SELECT * FROM users WHERE id = ?', [userId]);
 
@@ -362,6 +383,7 @@ const buildWeeklyPlan = (user, prefs, catalog) => {
 
 const buildShoppingList = (weeklyPlan, prefs, catalog) => {
   const aggregated = new Map();
+  const banned = new Set(parseList(prefs?.banned_foods).map(normalize));
 
   const addItem = (item, grams, calories) => {
     if (!item) return;
@@ -381,7 +403,7 @@ const buildShoppingList = (weeklyPlan, prefs, catalog) => {
 
   parseList(prefs?.favorite_foods).forEach((favoriteName) => {
     const catalogItem = getCatalogItemByName(catalog, favoriteName);
-    if (catalogItem) {
+    if (catalogItem && !banned.has(normalize(catalogItem.name))) {
       addItem(catalogItem, 100, Math.round((catalogItem.calories_per_100g || 0)));
     }
   });
