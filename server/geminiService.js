@@ -841,6 +841,7 @@ async function getAIChatResponse(userQuestion, context) {
     const asksCalories = /kalori|kcal|kaç/.test(questionLower) && /almalı|almali|gerek|hedef/.test(questionLower);
   const asksRecipe = /tarif|recipe|nasil yap|nasıl yap|yapilis|yapılış/.test(questionLower);
   const asksDietDessert = asksRecipe && /tatli|tatlı|dessert/.test(questionLower) && /diyet|hafif|dusuk|düşük|fit|ogrenci|öğrenci/.test(questionLower);
+    const asksChocolate = /bitter|cikolata|çikolata|kakao/.test(questionLower);
 
     if (asksCalories && context?.user_profile?.age && context?.user_profile?.height && context?.user_profile?.weight && context?.user_profile?.gender) {
       const age = Number(context.user_profile.age);
@@ -878,14 +879,23 @@ async function getAIChatResponse(userQuestion, context) {
       const remaining = Math.max(0, dailyGoal - consumed);
       const targetKcal = remaining < 180 ? Math.max(90, remaining) : 160;
 
-      const deterministicDessert = [
-        'Ogrenci dostu hafif tatli: Yogurtlu Muzlu Yulaf Kasesi',
-        `1 kase yaklasik ${targetKcal} kcal (ilave seker yok).`,
-        'Malzemeler: 3 yemek kasigi yogurt, yarim muz, 1 yemek kasigi yulaf, tarcin.',
-        'Hazirlama: Hepsini karistir, 10 dk buzdolabinda beklet.',
-        'Makro (yaklasik): P 6-8g, K 22-28g, Y 3-5g.',
-        'Istersen muzu azaltip kaloriyi biraz daha dusurebilirsin.'
-      ].join('\n');
+      const deterministicDessert = asksChocolate
+        ? [
+            'Ogrenci dostu hafif tatli: Bitter Cikolatali Yogurt Kup',
+            `1 kup yaklasik ${targetKcal} kcal (ilave seker yok).`,
+            'Malzemeler: 3 yemek kasigi yogurt, 10g rendelenmis bitter cikolata (%70+), 1 tatli kasigi yulaf, 1 tatli kasigi kakao.',
+            'Hazirlama: Yogurt + kakao + yulafi karistir, ustune bitter cikolata serp, 10 dk dolapta beklet.',
+            'Makro (yaklasik): P 7-9g, K 14-18g, Y 7-10g.',
+            'Daha dusuk kalori icin bitter cikolatayi 7g kullanabilirsin.'
+          ].join('\n')
+        : [
+            'Ogrenci dostu hafif tatli: Yogurtlu Muzlu Yulaf Kasesi',
+            `1 kase yaklasik ${targetKcal} kcal (ilave seker yok).`,
+            'Malzemeler: 3 yemek kasigi yogurt, yarim muz, 1 yemek kasigi yulaf, tarcin.',
+            'Hazirlama: Hepsini karistir, 10 dk buzdolabinda beklet.',
+            'Makro (yaklasik): P 6-8g, K 22-28g, Y 3-5g.',
+            'Istersen muzu azaltip kaloriyi biraz daha dusurebilirsin.'
+          ].join('\n');
 
       return {
         success: true,
