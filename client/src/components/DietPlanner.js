@@ -8,7 +8,7 @@ const toArray = (text) => String(text || '')
   .map((item) => item.trim())
   .filter(Boolean);
 
-const DietPlanner = ({ userId }) => {
+const DietPlanner = ({ userId, onPreferencesUpdated }) => {
   const [overview, setOverview] = useState(null);
   const [form, setForm] = useState({
     favorite_foods: '',
@@ -61,6 +61,9 @@ const DietPlanner = ({ userId }) => {
       });
       setMessage('Tercihler kaydedildi.');
       await loadPlanner();
+      if (onPreferencesUpdated) {
+        onPreferencesUpdated();
+      }
       setTimeout(() => setMessage(''), 2500);
     } catch (err) {
       console.error('Error saving diet preferences:', err);

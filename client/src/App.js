@@ -17,6 +17,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dashboardRefresh, setDashboardRefresh] = useState(0);
+  const bumpDashboardRefresh = useCallback(() => {
+    setDashboardRefresh((prev) => prev + 1);
+  }, []);
 
   const fetchUser = useCallback(async (targetUserId = userId) => {
     if (!targetUserId) return;
@@ -171,11 +174,11 @@ function App() {
 
       <main className="app-main">
         {currentPage === 'dashboard' && <Dashboard userId={userId} user={user} onUpdate={fetchUser} refreshKey={dashboardRefresh} />}
-        {currentPage === 'meal-tracker' && <MealTracker userId={userId} onMealAdded={() => { fetchUser(); setDashboardRefresh(prev => prev + 1); }} />}
+        {currentPage === 'meal-tracker' && <MealTracker userId={userId} onMealAdded={() => { fetchUser(); bumpDashboardRefresh(); }} />}
         {currentPage === 'recommendations' && <Recommendations userId={userId} refreshKey={dashboardRefresh} />}
-        {currentPage === 'diet-planner' && <DietPlanner userId={userId} />}
+        {currentPage === 'diet-planner' && <DietPlanner userId={userId} onPreferencesUpdated={() => { fetchUser(); bumpDashboardRefresh(); }} />}
         {currentPage === 'analytics' && <Analytics userId={userId} />}
-        {currentPage === 'profile' && <UserProfile userId={userId} onUserUpdated={fetchUser} />}
+        {currentPage === 'profile' && <UserProfile userId={userId} onUserUpdated={() => { fetchUser(); bumpDashboardRefresh(); }} />}
       </main>
 
       <footer className="app-footer">
