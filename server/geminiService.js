@@ -839,6 +839,8 @@ async function getAIChatResponse(userQuestion, context) {
 
     const questionLower = String(userQuestion || '').toLowerCase();
     const asksCalories = /kalori|kcal|kaç/.test(questionLower) && /almalı|almali|gerek|hedef/.test(questionLower);
+  const asksRecipe = /tarif|recipe|nasil yap|nasıl yap|yapilis|yapılış/.test(questionLower);
+  const asksDietDessert = asksRecipe && /tatli|tatlı|dessert/.test(questionLower) && /diyet|hafif|dusuk|düşük|fit|ogrenci|öğrenci/.test(questionLower);
 
     if (asksCalories && context?.user_profile?.age && context?.user_profile?.height && context?.user_profile?.weight && context?.user_profile?.gender) {
       const age = Number(context.user_profile.age);
@@ -870,6 +872,29 @@ async function getAIChatResponse(userQuestion, context) {
       };
     }
 
+    if (asksDietDessert) {
+      const dailyGoal = Number(context?.user_profile?.daily_calorie_goal) || 2000;
+      const consumed = Number(context?.daily_nutrition?.calories) || 0;
+      const remaining = Math.max(0, dailyGoal - consumed);
+      const targetKcal = remaining < 180 ? Math.max(90, remaining) : 160;
+
+      const deterministicDessert = [
+        'Ogrenci dostu hafif tatli: Yogurtlu Muzlu Yulaf Kasesi',
+        `1 kase yaklasik ${targetKcal} kcal (ilave seker yok).`,
+        'Malzemeler: 3 yemek kasigi yogurt, yarim muz, 1 yemek kasigi yulaf, tarcin.',
+        'Hazirlama: Hepsini karistir, 10 dk buzdolabinda beklet.',
+        'Makro (yaklasik): P 6-8g, K 22-28g, Y 3-5g.',
+        'Istersen muzu azaltip kaloriyi biraz daha dusurebilirsin.'
+      ].join('\n');
+
+      return {
+        success: true,
+        response: deterministicDessert,
+        timestamp: new Date(),
+        deterministic: true
+      };
+    }
+
     const prompt = `You are a licensed dietitian assistant. Reply ONLY in Turkish.
 Rules you must follow:
 - Never invent formulas or pseudoscientific metrics.
@@ -877,7 +902,10 @@ Rules you must follow:
 - Keep response short and practical (max 6 lines).
 - If data is insufficient, explicitly say what is missing in one short line.
 - Do not output markdown headers, tables, or long paragraphs.
-  - You may recommend foods from the catalog even if they were not already logged today.
+- You may recommend foods from the catalog even if they were not already logged today.
+- If user asks for a recipe, give exactly: recipe name, ingredient list with measures, 2-3 prep steps, and estimated kcal + macros.
+- For diet/light dessert requests: do NOT suggest added sugar or deep-frying. Prefer yogurt, fruit, oats, milk, cocoa, cinnamon.
+- Never claim unrealistic nutrition values; keep ranges realistic.
 
 The user has received AI recommendations and now asks a follow-up question.
 
