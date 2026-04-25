@@ -204,6 +204,49 @@ const MealTracker = ({ userId, onMealAdded }) => {
     }
   };
 
+  const handleDeleteMealItem = async (mealId, itemId) => {
+    if (!window.confirm('Bu öğün kalemini silmek istiyor musun?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.delete(`/api/meals/${mealId}/items/${itemId}`);
+      await fetchMeals();
+      onMealAdded();
+      setSuccessMessage('Öğün kalemi silindi!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error deleting meal item:', error);
+      setPhotoError(error?.response?.data?.error || 'Öğün kalemi silinemedi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteMeal = async (mealId) => {
+    if (!window.confirm('Bu öğünü tamamen silmek istiyor musun?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.delete(`/api/meals/${mealId}`);
+      if (selectedMeal === mealId) {
+        setSelectedMeal(null);
+      }
+      await fetchMeals();
+      onMealAdded();
+      setSuccessMessage('Öğün silindi!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      setPhotoError(error?.response?.data?.error || 'Öğün silinemedi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="meal-tracker">
       <div className="tracker-header">
@@ -270,6 +313,7 @@ const MealTracker = ({ userId, onMealAdded }) => {
           </div>
 
           <div className="photo-analyzer">
+            <div className="photo-version-badge">Foto AI v3</div>
             <label className="photo-upload-label">
               <span>Ürün Fotoğrafı</span>
               <input type="file" accept="image/*" onChange={handlePhotoSelect} />
@@ -374,22 +418,42 @@ const MealTracker = ({ userId, onMealAdded }) => {
             {meals.map(meal => (
               <div key={meal.id} className="meal-card">
                 <div className="meal-card-header">
-                  <h4>{meal.meal_type}</h4>
-                  <span className="meal-time">
-                    {new Date(meal.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="meal-header-main">
+                    <h4>{meal.meal_type}</h4>
+                    <span className="meal-time">
+                      {new Date(meal.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="delete-meal-btn"
+                    onClick={() => handleDeleteMeal(meal.id)}
+                    disabled={loading}
+                  >
+                    Öğünü Sil
+                  </button>
                 </div>
                 {meal.items && meal.items.length > 0 ? (
                   <div className="meal-items-list">
                     {meal.items.map(item => (
                       <div key={item.id} className="meal-item-row">
-                        <div className="item-name">{item.food_name}</div>
-                        <div className="item-nutrition">
-                          <span className="calories">{item.calories} kcal</span>
-                          <span className="protein">{Math.round(item.protein)}g P</span>
-                          <span className="carbs">{Math.round(item.carbs)}g C</span>
-                          <span className="fat">{Math.round(item.fat)}g Y</span>
+                        <div className="meal-item-main">
+                          <div className="item-name">{item.food_name}</div>
+                          <div className="item-nutrition">
+                            <span className="calories">{item.calories} kcal</span>
+                            <span className="protein">{Math.round(item.protein)}g P</span>
+                            <span className="carbs">{Math.round(item.carbs)}g C</span>
+                            <span className="fat">{Math.round(item.fat)}g Y</span>
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          className="delete-item-btn"
+                          onClick={() => handleDeleteMealItem(meal.id, item.id)}
+                          disabled={loading}
+                        >
+                          Sil
+                        </button>
                       </div>
                     ))}
                     <div className="meal-total">

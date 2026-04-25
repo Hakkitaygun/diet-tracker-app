@@ -11,6 +11,54 @@ const getLocalDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const recalculateDailySummary = async (userId, date) => {
+  const totals = await get(
+    `SELECT
+       COALESCE(SUM(mi.calories), 0) AS total_calories,
+       COALESCE(SUM(mi.protein), 0) AS total_protein,
+       COALESCE(SUM(mi.carbs), 0) AS total_carbs,
+       COALESCE(SUM(mi.fat), 0) AS total_fat
+     FROM meal_items mi
+     INNER JOIN meals m ON m.id = mi.meal_id
+     WHERE m.user_id = ? AND m.date = ?`,
+    [userId, date]
+  );
+
+  const existingSummary = await get('SELECT * FROM daily_summary WHERE user_id = ? AND date = ?', [userId, date]);
+
+  if (existingSummary) {
+    await run(
+      `UPDATE daily_summary
+       SET total_calories = ?,
+           total_protein = ?,
+           total_carbs = ?,
+           total_fat = ?
+       WHERE user_id = ? AND date = ?`,
+      [
+        totals?.total_calories || 0,
+        totals?.total_protein || 0,
+        totals?.total_carbs || 0,
+        totals?.total_fat || 0,
+        userId,
+        date
+      ]
+    );
+  } else {
+    await run(
+      `INSERT INTO daily_summary (user_id, date, total_calories, total_protein, total_carbs, total_fat)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        date,
+        totals?.total_calories || 0,
+        totals?.total_protein || 0,
+        totals?.total_carbs || 0,
+        totals?.total_fat || 0
+      ]
+    );
+  }
+};
+
 // Add a new meal
 router.post('/', async (req, res) => {
   try {
@@ -115,6 +163,46 @@ router.post('/:mealId/items', async (req, res) => {
     }
 
     res.json({ id: result.id, message: 'Item added to meal' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a single item from a meal
+router.delete('/:mealId/items/:itemId', async (req, res) => {
+  try {
+    const meal = await get('SELECT * FROM meals WHERE id = ?', [req.params.mealId]);
+    if (!meal) {
+      return res.status(404).json({ error: 'Meal not found' });
+    }
+
+    const item = await get('SELECT * FROM meal_items WHERE id = ? AND meal_id = ?', [req.params.itemId, req.params.mealId]);
+    if (!item) {
+      return res.status(404).json({ error: 'Meal item not found' });
+    }
+
+    await run('DELETE FROM meal_items WHERE id = ? AND meal_id = ?', [req.params.itemId, req.params.mealId]);
+    await recalculateDailySummary(meal.user_id, meal.date);
+
+    res.json({ message: 'Meal item deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a whole meal and its items
+router.delete('/:mealId', async (req, res) => {
+  try {
+    const meal = await get('SELECT * FROM meals WHERE id = ?', [req.params.mealId]);
+    if (!meal) {
+      return res.status(404).json({ error: 'Meal not found' });
+    }
+
+    await run('DELETE FROM meal_items WHERE meal_id = ?', [req.params.mealId]);
+    await run('DELETE FROM meals WHERE id = ?', [req.params.mealId]);
+    await recalculateDailySummary(meal.user_id, meal.date);
+
+    res.json({ message: 'Meal deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
