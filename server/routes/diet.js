@@ -42,6 +42,8 @@ const calcPortionNutrition = (food, grams) => {
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
+const getCatalogItemByName = (catalog, name) => catalog[normalize(name)] || null;
+
 const getUser = async (userId) => get('SELECT * FROM users WHERE id = ?', [userId]);
 
 const getPreferences = async (userId) => {
@@ -358,18 +360,30 @@ const buildWeeklyPlan = (user, prefs, catalog) => {
   };
 };
 
-const buildShoppingList = (weeklyPlan) => {
+const buildShoppingList = (weeklyPlan, prefs, catalog) => {
   const aggregated = new Map();
+
+  const addItem = (item, grams, calories) => {
+    if (!item) return;
+    const current = aggregated.get(item.name) || { grams: 0, calories: 0, category: item.category };
+    current.grams += grams;
+    current.calories += calories;
+    aggregated.set(item.name, current);
+  };
 
   weeklyPlan.days.forEach((day) => {
     day.meals.forEach((meal) => {
       meal.items.forEach((item) => {
-        const current = aggregated.get(item.name) || { grams: 0, calories: 0, category: item.category };
-        current.grams += item.grams;
-        current.calories += item.calories;
-        aggregated.set(item.name, current);
+        addItem(item, item.grams, item.calories);
       });
     });
+  });
+
+  parseList(prefs?.favorite_foods).forEach((favoriteName) => {
+    const catalogItem = getCatalogItemByName(catalog, favoriteName);
+    if (catalogItem) {
+      addItem(catalogItem, 100, Math.round((catalogItem.calories_per_100g || 0)));
+    }
   });
 
   return Array.from(aggregated.entries())
@@ -393,7 +407,7 @@ router.get('/overview/:userId', async (req, res) => {
     const catalog = await loadCatalog();
     const programs = buildGoalPrograms(user, prefs);
     const weeklyPlan = buildWeeklyPlan(user, prefs, catalog);
-    const shoppingList = buildShoppingList(weeklyPlan);
+    const shoppingList = buildShoppingList(weeklyPlan, prefs, catalog);
 
     res.json({
       user: {
