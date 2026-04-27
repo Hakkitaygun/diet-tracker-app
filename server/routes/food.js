@@ -4,6 +4,64 @@ const { all, get, run } = require('../database');
 const { getAIFoodSuggestion } = require('../geminiService');
 const { analyzeFoodImage } = require('../visionService');
 
+const normalizeForSearch = (value) => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/ı/g, 'i')
+  .replace(/ğ/g, 'g')
+  .replace(/ü/g, 'u')
+  .replace(/ş/g, 's')
+  .replace(/ö/g, 'o')
+  .replace(/ç/g, 'c');
+
+const shouldUseAiForSearch = (query) => normalizeForSearch(query).length >= 3;
+
+const isSuspiciousGeneratedFood = (food) => {
+  const name = String(food?.name || '').trim();
+  const category = String(food?.category || '').trim().toLowerCase();
+  const description = String(food?.description || '').trim().toLowerCase();
+  const isDefaultAiRecord = category === 'ai üretilen'.toLowerCase() || description.includes('ai tarafından oluşturuldu');
+  return isDefaultAiRecord && name.length <= 5 && !name.includes(' ');
+};
+
+const localTurkishFilter = (foods, query, limit) => {
+  const foldedQuery = normalizeForSearch(query);
+  if (!foldedQuery) return [];
+
+  const matches = foods.filter((food) => {
+    const haystack = [food.name, food.category, food.description]
+      .map((part) => normalizeForSearch(part))
+      .join(' ');
+    return haystack.includes(foldedQuery);
+  });
+
+  return matches.slice(0, limit);
+};
+
+const sanitizeAiFood = (food) => {
+  const name = String(food?.name || '').replace(/\s+/g, ' ').trim();
+  const category = String(food?.category || 'AI Üretilen').replace(/\s+/g, ' ').trim();
+  const description = String(food?.description || 'AI tarafından oluşturuldu').replace(/\s+/g, ' ').trim();
+
+  return {
+    name,
+    category,
+    description,
+    calories_per_100g: Math.max(1, Math.min(900, Math.round(Number(food?.calories_per_100g) || 0))),
+    protein_per_100g: Math.max(0, Math.min(100, Number(food?.protein_per_100g) || 0)),
+    carbs_per_100g: Math.max(0, Math.min(100, Number(food?.carbs_per_100g) || 0)),
+    fat_per_100g: Math.max(0, Math.min(100, Number(food?.fat_per_100g) || 0)),
+    confidence: String(food?.confidence || 'low').toLowerCase()
+  };
+};
+
+const isValidAiFood = (food) => {
+  if (!food?.name || food.name.length < 2 || food.name.length > 64) return false;
+  if (!/[a-zA-ZçğıöşüÇĞİÖŞÜ]/.test(food.name)) return false;
+  if (!Number.isFinite(food.calories_per_100g) || food.calories_per_100g <= 0) return false;
+  return true;
+};
+
 const calcPortionNutrition = (food, grams) => {
   const multiplier = grams / 100;
   return {
@@ -44,28 +102,49 @@ const upsertFoodRecord = async (food) => {
 router.get('/', async (req, res) => {
   try {
     const { search, category, limit = 200 } = req.query;
+    const searchText = String(search || '').trim();
+    const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 200, 500));
     let query = 'SELECT * FROM food_database';
     let params = [];
 
-    if (search) {
+    if (searchText) {
       query += ' WHERE name LIKE ? OR category LIKE ? OR description LIKE ?';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      params.push(`%${searchText}%`, `%${searchText}%`, `%${searchText}%`);
     }
     if (category) {
-      query += search ? ' AND category = ?' : ' WHERE category = ?';
+      query += searchText ? ' AND category = ?' : ' WHERE category = ?';
       params.push(category);
     }
 
     query += ' ORDER BY category, name LIMIT ?';
-    params.push(Math.max(1, Math.min(parseInt(limit, 10) || 200, 500)));
+    params.push(safeLimit);
 
     let foods = await all(query, params);
+    foods = foods.filter((food) => !isSuspiciousGeneratedFood(food));
 
-    if (search && foods.length === 0) {
-      const aiResult = await getAIFoodSuggestion(search);
+    // Fallback to accent-insensitive local filtering if SQL LIKE misses Turkish variants.
+    if (searchText && foods.length === 0) {
+      const allFoods = await all('SELECT * FROM food_database ORDER BY category, name');
+      foods = localTurkishFilter(allFoods, searchText, safeLimit).filter((food) => !isSuspiciousGeneratedFood(food));
+    }
+
+    if (searchText && foods.length === 0 && shouldUseAiForSearch(searchText)) {
+      const aiResult = await getAIFoodSuggestion(searchText);
       if (aiResult?.success && aiResult.food) {
-        const savedFood = await upsertFoodRecord(aiResult.food);
-        foods = savedFood ? [{ ...savedFood, ai_generated: true, confidence: aiResult.food.confidence || 'low' }] : [{ ...aiResult.food, ai_generated: true }];
+        const candidate = sanitizeAiFood(aiResult.food);
+        const confidence = candidate.confidence;
+
+        if (isValidAiFood(candidate)) {
+          // Persist only non-low confidence items to avoid polluting catalog with weak guesses.
+          if (confidence === 'medium' || confidence === 'high') {
+            const savedFood = await upsertFoodRecord(candidate);
+            foods = savedFood
+              ? [{ ...savedFood, ai_generated: true, confidence }]
+              : [{ ...candidate, ai_generated: true }];
+          } else {
+            foods = [{ ...candidate, ai_generated: true }];
+          }
+        }
       }
     }
 

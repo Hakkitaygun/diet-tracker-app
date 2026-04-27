@@ -51,9 +51,8 @@ const MealTracker = ({ userId, onMealAdded }) => {
   }, [userId]);
 
   useEffect(() => {
-    fetchFoods();
     fetchMeals();
-  }, [userId, fetchFoods, fetchMeals]);
+  }, [userId, fetchMeals]);
 
   const handleSearchFood = (e) => {
     const query = e.target.value;
@@ -375,35 +374,37 @@ const MealTracker = ({ userId, onMealAdded }) => {
             </div>
           )}
 
-          <div className="food-suggestions">
-            {searchQuery.length > 0 && foods.length === 0 && (
+          {searchQuery.trim().length > 0 && (
+            <div className="food-suggestions">
+              {foods.length === 0 && (
               <p className="no-results">Sonuç bulunamadı</p>
-            )}
-            {foods.slice(0, 10).map(food => (
-              <div key={food.id} className="food-suggestion">
-                <div className="food-info">
-                  <div className="food-name">
-                    {food.name}
-                    {food.ai_generated && <span className="ai-food-badge">AI</span>}
+              )}
+              {foods.slice(0, 10).map(food => (
+                <div key={food.id || food.name} className="food-suggestion">
+                  <div className="food-info">
+                    <div className="food-name">
+                      {food.name}
+                      {food.ai_generated && <span className="ai-food-badge">AI</span>}
+                    </div>
+                    <div className="food-details">
+                      <span>{food.calories_per_100g} kcal/100g</span>
+                      <span>Protein: {food.protein_per_100g}g</span>
+                      <span>
+                        Secili porsiyon: {Math.round((food.calories_per_100g || 0) * (Math.max(1, Number(portionGrams) || 100) / 100))} kcal
+                      </span>
+                    </div>
                   </div>
-                  <div className="food-details">
-                    <span>{food.calories_per_100g} kcal/100g</span>
-                    <span>Protein: {food.protein_per_100g}g</span>
-                    <span>
-                      Secili porsiyon: {Math.round((food.calories_per_100g || 0) * (Math.max(1, Number(portionGrams) || 100) / 100))} kcal
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => handleAddFoodToMeal(food)}
+                    disabled={!selectedMeal || loading}
+                    className="add-food-btn"
+                  >
+                    Ekle
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleAddFoodToMeal(food)}
-                  disabled={!selectedMeal || loading}
-                  className="add-food-btn"
-                >
-                  Ekle
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

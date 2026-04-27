@@ -594,9 +594,9 @@ async function getAIFoodSuggestion(searchTerm) {
       };
     }
 
-    const prompt = `You are a nutrition data assistant. Reply ONLY with valid JSON. No markdown, no explanation.
+    const prompt = `Sen bir diyetisyen veri asistanisin. Sadece gecerli JSON don. Markdown veya aciklama yazma.
 
-User searched for a food that does not exist in the current database: "${searchTerm}".
+  Kullanici veritabaninda bulunamayan su gidayi aradi: "${searchTerm}".
 
 Return one realistic food record in this exact JSON shape:
 {
@@ -611,10 +611,12 @@ Return one realistic food record in this exact JSON shape:
 }
 
 Rules:
-- Use common nutrition values for the closest likely food.
-- Keep numbers realistic and suitable for a diet tracker.
-- If the exact food is ambiguous, choose the closest sensible match.
-- Output only JSON.`;
+- "name" alani Turkceye uygun, gercek hayatta kullanilan bir gida adi olsun.
+- Uydurma, anlamsiz veya kisaltma benzeri isimler kullanma.
+- Turkiye'de yaygin karsiligi varsa onu sec (orn: pirinç pilavi icin "Pirinç").
+- Besin degerleri gercekci olsun.
+- "confidence" degeri low, medium veya high olsun.
+- Sadece JSON don.`;
 
     const text = await callAIWithFallback(prompt);
     const parsed = extractJsonPayload(text);
