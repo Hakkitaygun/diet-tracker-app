@@ -398,50 +398,22 @@ router.get('/', async (req, res) => {
         return res.json(cached);
       }
 
-      const tryBuildResponse = (rawFood) => {
-        const candidate = sanitizeAiFood(rawFood);
-        const valid = isValidAiFood(candidate) && isAiCandidateRelevantToQuery(candidate, searchText);
-        if (!valid || isLowTrustAiCandidate(candidate)) return null;
-
-        return [
-          {
-            ...candidate,
-            ai_generated: true,
-            source: candidate.source || 'ai-api',
-            transient: true,
-            confidence: candidate.confidence || 'medium'
-          }
-        ];
-      };
-
-      const aiResult = await withTimeout(getAIFoodSuggestion(searchText), 9000, 'AI search timed out');
-      const firstResponse = aiResult?.success && aiResult.food ? tryBuildResponse(aiResult.food) : null;
-      if (firstResponse) {
-        setCachedSearch(searchText, firstResponse);
-        return res.json(firstResponse);
-      }
-
-      const openFoodFactsFood = await getOpenFoodFactsSuggestion(searchText);
-      if (openFoodFactsFood) {
-        const offResponse = [
-          {
-            ...openFoodFactsFood,
-            ai_generated: true,
-            source: 'openfoodfacts',
-            transient: true,
-            confidence: openFoodFactsFood.confidence || 'medium'
-          }
-        ];
-        setCachedSearch(searchText, offResponse);
-        return res.json(offResponse);
-      }
-
-      const strictPromptQuery = `${searchText} (tam olarak bu urun/marka, varyanti dogru olsun)`;
-      const retryAiResult = await withTimeout(getAIFoodSuggestion(strictPromptQuery), 9000, 'AI strict search timed out');
-      const secondResponse = retryAiResult?.success && retryAiResult.food ? tryBuildResponse(retryAiResult.food) : null;
-      if (secondResponse) {
-        setCachedSearch(searchText, secondResponse);
-        return res.json(secondResponse);
+      const aiResult = await withTimeout(getAIFoodSuggestion(searchText), 12000, 'AI search timed out');
+      if (aiResult?.success && aiResult.food) {
+        const candidate = sanitizeAiFood(aiResult.food);
+        if (isValidAiFood(candidate)) {
+          const aiResponse = [
+            {
+              ...candidate,
+              ai_generated: true,
+              source: candidate.source || 'ai-api',
+              transient: true,
+              confidence: candidate.confidence || 'medium'
+            }
+          ];
+          setCachedSearch(searchText, aiResponse);
+          return res.json(aiResponse);
+        }
       }
 
       setCachedSearch(searchText, []);
