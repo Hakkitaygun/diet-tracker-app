@@ -395,13 +395,17 @@ router.get('/', async (req, res) => {
 
       const cached = getCachedSearch(searchText);
       if (cached) {
-        return res.json(cached);
+        const cachedItem = Array.isArray(cached) && cached.length > 0 ? cached[0] : null;
+        if (!cachedItem || isAiCandidateRelevantToQuery(cachedItem, searchText)) {
+          return res.json(cached);
+        }
+        searchCache.delete(normalizeForSearch(searchText));
       }
 
       const aiResult = await withTimeout(getAIFoodSuggestion(searchText), 12000, 'AI search timed out');
       if (aiResult?.success && aiResult.food) {
         const candidate = sanitizeAiFood(aiResult.food);
-        if (isValidAiFood(candidate)) {
+        if (isValidAiFood(candidate) && isAiCandidateRelevantToQuery(candidate, searchText)) {
           const aiResponse = [
             {
               ...candidate,
@@ -413,6 +417,25 @@ router.get('/', async (req, res) => {
           ];
           setCachedSearch(searchText, aiResponse);
           return res.json(aiResponse);
+        }
+      }
+
+      const strictPromptQuery = `${searchText} (sadece bu urune/markaya yakin sonuc ver. alakasiz urun verme)`;
+      const strictAiResult = await withTimeout(getAIFoodSuggestion(strictPromptQuery), 12000, 'AI strict search timed out');
+      if (strictAiResult?.success && strictAiResult.food) {
+        const strictCandidate = sanitizeAiFood(strictAiResult.food);
+        if (isValidAiFood(strictCandidate) && isAiCandidateRelevantToQuery(strictCandidate, searchText)) {
+          const strictResponse = [
+            {
+              ...strictCandidate,
+              ai_generated: true,
+              source: strictCandidate.source || 'ai-api',
+              transient: true,
+              confidence: strictCandidate.confidence || 'medium'
+            }
+          ];
+          setCachedSearch(searchText, strictResponse);
+          return res.json(strictResponse);
         }
       }
 
