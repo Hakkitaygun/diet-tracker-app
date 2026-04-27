@@ -243,15 +243,33 @@ router.get('/', async (req, res) => {
     const { search, category, limit = 200 } = req.query;
     const searchText = String(search || '').trim();
     const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 200, 500));
+
+    // User search input is handled by AI API directly.
+    if (searchText) {
+      const aiResult = await getAIFoodSuggestion(searchText);
+      if (aiResult?.success && aiResult.food) {
+        const candidate = sanitizeAiFood(aiResult.food);
+        if (isValidAiFood(candidate)) {
+          return res.json([
+            {
+              ...candidate,
+              ai_generated: true,
+              source: 'ai-api',
+              transient: true,
+              confidence: candidate.confidence || 'medium'
+            }
+          ]);
+        }
+      }
+
+      return res.json([]);
+    }
+
     let query = 'SELECT * FROM food_database';
     let params = [];
 
-    if (searchText) {
-      query += ' WHERE name LIKE ? OR category LIKE ? OR description LIKE ?';
-      params.push(`%${searchText}%`, `%${searchText}%`, `%${searchText}%`);
-    }
     if (category) {
-      query += searchText ? ' AND category = ?' : ' WHERE category = ?';
+      query += ' WHERE category = ?';
       params.push(category);
     }
 
@@ -260,39 +278,6 @@ router.get('/', async (req, res) => {
 
     let foods = await all(query, params);
     foods = foods.filter((food) => !isSuspiciousGeneratedFood(food));
-
-    // Fallback to accent-insensitive local filtering if SQL LIKE misses Turkish variants.
-    if (searchText && foods.length === 0) {
-      const allFoods = await all('SELECT * FROM food_database ORDER BY category, name');
-      foods = localTurkishFilter(allFoods, searchText, safeLimit).filter((food) => !isSuspiciousGeneratedFood(food));
-    }
-
-    if (searchText && foods.length === 0) {
-      const brandFood = getBrandOverride(searchText);
-      if (brandFood) {
-        foods = [{ ...brandFood, ai_generated: true, confidence: 'high', transient: true }];
-      }
-    }
-
-    if (searchText && foods.length === 0 && shouldUseAiForSearch(searchText)) {
-      const openFoodFactsFood = await getOpenFoodFactsSuggestion(searchText);
-      if (openFoodFactsFood) {
-        foods = [{ ...openFoodFactsFood, ai_generated: true, source: 'openfoodfacts', transient: true }];
-      }
-    }
-
-    if (searchText && foods.length === 0 && shouldUseAiForSearch(searchText)) {
-      const aiResult = await getAIFoodSuggestion(searchText);
-      if (aiResult?.success && aiResult.food) {
-        const candidate = sanitizeAiFood(aiResult.food);
-        const confidence = candidate.confidence;
-
-        if (isValidAiFood(candidate)) {
-          // Return AI suggestion as transient result; do not persist to catalog.
-          foods = [{ ...candidate, ai_generated: true, confidence, transient: true }];
-        }
-      }
-    }
 
     res.json(foods);
   } catch (error) {
