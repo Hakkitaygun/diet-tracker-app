@@ -17,6 +17,99 @@ const normalizeForSearch = (value) => String(value || '')
 
 const shouldUseAiForSearch = (query) => normalizeForSearch(query).length >= 3;
 
+const QUERY_STOP_WORDS = new Set([
+  've', 'ile', 'icin', 'için', 'marka', 'urun', 'ürün', 'gida', 'gıda', 'adet', 'gram', 'ml'
+]);
+
+const BRAND_ALIAS_GROUPS = {
+  pepsi: ['pepsi', 'pepsi max', 'pepsi zero'],
+  coca_cola: ['coca cola', 'coca-cola', 'cocacola', 'cola'],
+  fanta: ['fanta'],
+  sprite: ['sprite'],
+  ulker: ['ulker', 'ülker'],
+  eti: ['eti'],
+  nestle: ['nestle', 'nestlé'],
+  kelloggs: ['kelloggs', 'kellogg']
+};
+
+const tokenizeForMatch = (value) => normalizeForSearch(value)
+  .split(/\s+/)
+  .map((token) => token.trim())
+  .filter((token) => token.length >= 3 && !QUERY_STOP_WORDS.has(token));
+
+const detectBrandKey = (value) => {
+  const folded = normalizeForSearch(value);
+  const found = Object.entries(BRAND_ALIAS_GROUPS).find(([, aliases]) =>
+    aliases.some((alias) => folded.includes(normalizeForSearch(alias)))
+  );
+  return found ? found[0] : null;
+};
+
+const queryWantsZeroVariant = (query) => {
+  const folded = normalizeForSearch(query);
+  return (
+    folded.includes('zero') ||
+    folded.includes('light') ||
+    folded.includes('diet') ||
+    folded.includes('sekersiz') ||
+    folded.includes('seker ilavesiz') ||
+    folded.includes('sugar free')
+  );
+};
+
+const candidateLooksZeroVariant = (candidate) => {
+  const text = normalizeForSearch(`${candidate?.name || ''} ${candidate?.description || ''}`);
+  const hasZeroText = (
+    text.includes('zero') ||
+    text.includes('light') ||
+    text.includes('diet') ||
+    text.includes('sekersiz') ||
+    text.includes('sugar free')
+  );
+
+  if (hasZeroText) return true;
+
+  const calories = Number(candidate?.calories_per_100g) || 0;
+  const carbs = Number(candidate?.carbs_per_100g) || 0;
+  return calories <= 12 && carbs <= 3;
+};
+
+const isAiCandidateRelevantToQuery = (candidate, query) => {
+  if (!candidate || !query) return false;
+
+  const foldedQuery = normalizeForSearch(query);
+  const foldedName = normalizeForSearch(candidate.name);
+  const foldedDescription = normalizeForSearch(candidate.description || '');
+  const candidateText = `${foldedName} ${foldedDescription}`.trim();
+
+  if (!candidateText) return false;
+
+  const queryBrand = detectBrandKey(foldedQuery);
+  const candidateBrand = detectBrandKey(candidateText);
+  if (queryBrand && queryBrand !== candidateBrand) {
+    return false;
+  }
+
+  const queryTokens = tokenizeForMatch(query);
+  const overlapCount = queryTokens.filter((token) => candidateText.includes(token)).length;
+
+  const hasDirectMatch = (
+    candidateText.includes(foldedQuery) ||
+    foldedQuery.includes(foldedName)
+  );
+
+  const tokenMatchOk = queryTokens.length <= 1 ? overlapCount >= 1 : overlapCount >= 1;
+  if (!hasDirectMatch && !tokenMatchOk) {
+    return false;
+  }
+
+  if (queryWantsZeroVariant(query) && !candidateLooksZeroVariant(candidate)) {
+    return false;
+  }
+
+  return true;
+};
+
 const BRAND_FOOD_OVERRIDES = [
   {
     keys: ['nutella', 'findik kremasi', 'fındık kreması'],
@@ -246,20 +339,33 @@ router.get('/', async (req, res) => {
 
     // User search input is handled by AI API directly.
     if (searchText) {
+      const tryBuildResponse = (rawFood) => {
+        const candidate = sanitizeAiFood(rawFood);
+        const valid = isValidAiFood(candidate) && isAiCandidateRelevantToQuery(candidate, searchText);
+        if (!valid) return null;
+
+        return [
+          {
+            ...candidate,
+            ai_generated: true,
+            source: 'ai-api',
+            transient: true,
+            confidence: candidate.confidence || 'medium'
+          }
+        ];
+      };
+
       const aiResult = await getAIFoodSuggestion(searchText);
-      if (aiResult?.success && aiResult.food) {
-        const candidate = sanitizeAiFood(aiResult.food);
-        if (isValidAiFood(candidate)) {
-          return res.json([
-            {
-              ...candidate,
-              ai_generated: true,
-              source: 'ai-api',
-              transient: true,
-              confidence: candidate.confidence || 'medium'
-            }
-          ]);
-        }
+      const firstResponse = aiResult?.success && aiResult.food ? tryBuildResponse(aiResult.food) : null;
+      if (firstResponse) {
+        return res.json(firstResponse);
+      }
+
+      const strictPromptQuery = `${searchText} (tam olarak bu urun/marka, varyanti dogru olsun)`;
+      const retryAiResult = await getAIFoodSuggestion(strictPromptQuery);
+      const secondResponse = retryAiResult?.success && retryAiResult.food ? tryBuildResponse(retryAiResult.food) : null;
+      if (secondResponse) {
+        return res.json(secondResponse);
       }
 
       return res.json([]);
