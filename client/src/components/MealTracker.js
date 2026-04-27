@@ -27,7 +27,6 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const [photoError, setPhotoError] = useState('');
   const [photoHint, setPhotoHint] = useState('');
   const latestSearchSeqRef = useRef(0);
-  const searchDebounceRef = useRef(null);
 
   const mealTypes = ['Kahvaltı', 'Ara Öğün', 'Öğle Yemeği', 'Ara Öğün 2', 'Akşam Yemeği'];
 
@@ -67,11 +66,14 @@ const MealTracker = ({ userId, onMealAdded }) => {
     const query = e.target.value;
     setSearchQuery(query);
 
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
+    if (query.trim().length === 0) {
+      latestSearchSeqRef.current += 1;
+      setFoods([]);
     }
+  };
 
-    const trimmed = query.trim();
+  const handleSubmitFoodSearch = () => {
+    const trimmed = searchQuery.trim();
     if (trimmed.length === 0) {
       latestSearchSeqRef.current += 1;
       setFoods([]);
@@ -80,16 +82,15 @@ const MealTracker = ({ userId, onMealAdded }) => {
 
     const seq = latestSearchSeqRef.current + 1;
     latestSearchSeqRef.current = seq;
-    searchDebounceRef.current = setTimeout(() => {
-      fetchFoods(trimmed, seq);
-    }, 300);
+    fetchFoods(trimmed, seq);
   };
 
-  useEffect(() => () => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
+  const handleSearchInputKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSubmitFoodSearch();
     }
-  }, []);
+  };
 
   const handleCreateMeal = async () => {
     try {
@@ -328,14 +329,25 @@ const MealTracker = ({ userId, onMealAdded }) => {
           </div>
           <div className="form-group">
             <label>Gıda Adı</label>
-            <input
-              type="text"
-              placeholder="Örn: Tavuk, Elma, Ekmek..."
-              value={searchQuery}
-              onChange={handleSearchFood}
-              className="food-search"
-              autoComplete="off"
-            />
+            <div className="food-search-row">
+              <input
+                type="text"
+                placeholder="Örn: Tavuk, Elma, Ekmek..."
+                value={searchQuery}
+                onChange={handleSearchFood}
+                onKeyDown={handleSearchInputKeyDown}
+                className="food-search"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="search-food-btn"
+                onClick={handleSubmitFoodSearch}
+                disabled={loading}
+              >
+                Ara
+              </button>
+            </div>
           </div>
 
           <div className="photo-analyzer">

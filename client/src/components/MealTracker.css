@@ -107,6 +107,35 @@
   transition: border-color 0.3s ease;
 }
 
+.food-search-row {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.search-food-btn {
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 5px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.search-food-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+}
+
+.search-food-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .food-search:focus {
   outline: none;
   border-color: #667eea;
@@ -550,6 +579,15 @@
   .food-suggestion {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .food-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-food-btn {
+    width: 100%;
   }
 
   .add-food-btn {
