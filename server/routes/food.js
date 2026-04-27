@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const { all, get, run } = require('../database');
 const { getAIFoodSuggestion } = require('../geminiService');
 const { analyzeFoodImage } = require('../visionService');
@@ -98,6 +99,108 @@ const isValidAiFood = (food) => {
   return true;
 };
 
+const toFiniteNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const pickFirstFinite = (...values) => {
+  for (const value of values) {
+    const num = toFiniteNumber(value);
+    if (num !== null) return num;
+  }
+  return null;
+};
+
+const detectCategoryFromText = (value) => {
+  const text = normalizeForSearch(value);
+  if (text.includes('beverage') || text.includes('drink') || text.includes('icecek') || text.includes('içecek')) return 'İçecekler';
+  if (text.includes('cereal') || text.includes('breakfast') || text.includes('gevrek')) return 'Tahıllar';
+  if (text.includes('chocolate') || text.includes('sweet') || text.includes('tatli') || text.includes('tatlı')) return 'Tatlılar';
+  if (text.includes('dairy') || text.includes('milk') || text.includes('süt')) return 'Süt Ürünleri';
+  return 'Hazır Gıdalar';
+};
+
+const getOpenFoodFactsSuggestion = async (searchText) => {
+  try {
+    const foldedQuery = normalizeForSearch(searchText);
+    if (!foldedQuery || foldedQuery.length < 3) return null;
+
+    const response = await axios.get('https://world.openfoodfacts.org/cgi/search.pl', {
+      params: {
+        search_terms: searchText,
+        search_simple: 1,
+        action: 'process',
+        json: 1,
+        page_size: 12,
+        fields: 'product_name,brands,quantity,categories,categories_tags,nutriments'
+      },
+      timeout: 7000
+    });
+
+    const products = Array.isArray(response.data?.products) ? response.data.products : [];
+    if (products.length === 0) return null;
+
+    const scored = products
+      .map((product) => {
+        const productName = String(product.product_name || '').trim();
+        if (!productName) return null;
+
+        const foldedName = normalizeForSearch(productName);
+        const nutriments = product.nutriments || {};
+        const kcal = pickFirstFinite(
+          nutriments['energy-kcal_100g'],
+          nutriments['energy-kcal_100ml'],
+          nutriments['energy-kcal_value']
+        );
+
+        if (kcal === null || kcal <= 0) return null;
+
+        const protein = pickFirstFinite(nutriments.proteins_100g, nutriments.proteins_100ml) || 0;
+        const carbs = pickFirstFinite(nutriments.carbohydrates_100g, nutriments.carbohydrates_100ml) || 0;
+        const fat = pickFirstFinite(nutriments.fat_100g, nutriments.fat_100ml) || 0;
+
+        const score = [
+          foldedName === foldedQuery ? 100 : 0,
+          foldedName.includes(foldedQuery) ? 40 : 0,
+          normalizeForSearch(product.brands || '').includes(foldedQuery) ? 25 : 0,
+          kcal > 0 ? 10 : 0
+        ].reduce((a, b) => a + b, 0);
+
+        return {
+          product,
+          productName,
+          score,
+          nutrition: { kcal, protein, carbs, fat }
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score);
+
+    const best = scored[0];
+    if (!best || best.score < 10) return null;
+
+    const brand = String(best.product.brands || '').split(',')[0].trim();
+    const displayName = brand ? `${best.productName} (${brand})` : best.productName;
+    const categoryHint = Array.isArray(best.product.categories_tags)
+      ? best.product.categories_tags.join(' ')
+      : String(best.product.categories || '');
+
+    return {
+      name: displayName.slice(0, 64),
+      category: detectCategoryFromText(categoryHint),
+      description: `OpenFoodFacts kaynagi${best.product.quantity ? ` - ${best.product.quantity}` : ''}`.trim(),
+      calories_per_100g: Math.max(1, Math.min(900, Math.round(best.nutrition.kcal))),
+      protein_per_100g: Math.max(0, Math.min(100, Number(best.nutrition.protein.toFixed(1)))),
+      carbs_per_100g: Math.max(0, Math.min(100, Number(best.nutrition.carbs.toFixed(1)))),
+      fat_per_100g: Math.max(0, Math.min(100, Number(best.nutrition.fat.toFixed(1)))),
+      confidence: best.score >= 70 ? 'high' : 'medium'
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
 const calcPortionNutrition = (food, grams) => {
   const multiplier = grams / 100;
   return {
@@ -168,6 +271,13 @@ router.get('/', async (req, res) => {
       const brandFood = getBrandOverride(searchText);
       if (brandFood) {
         foods = [{ ...brandFood, ai_generated: true, confidence: 'high', transient: true }];
+      }
+    }
+
+    if (searchText && foods.length === 0 && shouldUseAiForSearch(searchText)) {
+      const openFoodFactsFood = await getOpenFoodFactsSuggestion(searchText);
+      if (openFoodFactsFood) {
+        foods = [{ ...openFoodFactsFood, ai_generated: true, source: 'openfoodfacts', transient: true }];
       }
     }
 
