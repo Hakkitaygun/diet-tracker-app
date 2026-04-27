@@ -181,8 +181,23 @@ const sanitizeAiFood = (food) => {
     protein_per_100g: Math.max(0, Math.min(100, Number(food?.protein_per_100g) || 0)),
     carbs_per_100g: Math.max(0, Math.min(100, Number(food?.carbs_per_100g) || 0)),
     fat_per_100g: Math.max(0, Math.min(100, Number(food?.fat_per_100g) || 0)),
-    confidence: String(food?.confidence || 'low').toLowerCase()
+    confidence: String(food?.confidence || 'low').toLowerCase(),
+    source: String(food?.source || '').toLowerCase()
   };
+};
+
+const isLowTrustAiCandidate = (candidate) => {
+  const category = normalizeForSearch(candidate?.category || '');
+  const description = normalizeForSearch(candidate?.description || '');
+  const confidence = String(candidate?.confidence || 'low').toLowerCase();
+  const source = String(candidate?.source || '').toLowerCase();
+  const calories = Number(candidate?.calories_per_100g) || 0;
+
+  if (source === 'openfoodfacts') return false;
+  if (confidence === 'high' || confidence === 'medium') return false;
+  if (category.includes('ai uretilen') || description.includes('ai tarafindan')) return true;
+  if (calories === 120) return true;
+  return confidence === 'low';
 };
 
 const isValidAiFood = (food) => {
@@ -342,7 +357,7 @@ router.get('/', async (req, res) => {
       const tryBuildResponse = (rawFood) => {
         const candidate = sanitizeAiFood(rawFood);
         const valid = isValidAiFood(candidate) && isAiCandidateRelevantToQuery(candidate, searchText);
-        if (!valid) return null;
+        if (!valid || isLowTrustAiCandidate(candidate)) return null;
 
         return [
           {
@@ -359,6 +374,19 @@ router.get('/', async (req, res) => {
       const firstResponse = aiResult?.success && aiResult.food ? tryBuildResponse(aiResult.food) : null;
       if (firstResponse) {
         return res.json(firstResponse);
+      }
+
+      const openFoodFactsFood = await getOpenFoodFactsSuggestion(searchText);
+      if (openFoodFactsFood) {
+        return res.json([
+          {
+            ...openFoodFactsFood,
+            ai_generated: true,
+            source: 'openfoodfacts',
+            transient: true,
+            confidence: openFoodFactsFood.confidence || 'medium'
+          }
+        ]);
       }
 
       const strictPromptQuery = `${searchText} (tam olarak bu urun/marka, varyanti dogru olsun)`;
