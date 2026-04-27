@@ -471,6 +471,93 @@ function getFallbackFoodEstimate(searchTerm) {
   };
 }
 
+function toFiniteNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function pickFirstFinite(...values) {
+  for (const value of values) {
+    const num = toFiniteNumber(value);
+    if (num !== null) return num;
+  }
+  return null;
+}
+
+async function getOpenFoodFactsFallbackFood(searchTerm) {
+  try {
+    const query = String(searchTerm || '').trim();
+    if (!query || query.length < 3) return null;
+
+    const response = await axios.get('https://world.openfoodfacts.org/cgi/search.pl', {
+      params: {
+        search_terms: query,
+        search_simple: 1,
+        action: 'process',
+        json: 1,
+        page_size: 8,
+        fields: 'product_name,brands,nutriments,quantity'
+      },
+      timeout: 7000
+    });
+
+    const products = Array.isArray(response.data?.products) ? response.data.products : [];
+    if (products.length === 0) return null;
+
+    const best = products
+      .map((product) => {
+        const name = String(product.product_name || '').trim();
+        if (!name) return null;
+
+        const nutriments = product.nutriments || {};
+        const kcal = pickFirstFinite(
+          nutriments['energy-kcal_100g'],
+          nutriments['energy-kcal_100ml'],
+          nutriments['energy-kcal_value']
+        );
+        if (kcal === null || kcal <= 0) return null;
+
+        const protein = pickFirstFinite(nutriments.proteins_100g, nutriments.proteins_100ml) || 0;
+        const carbs = pickFirstFinite(nutriments.carbohydrates_100g, nutriments.carbohydrates_100ml) || 0;
+        const fat = pickFirstFinite(nutriments.fat_100g, nutriments.fat_100ml) || 0;
+
+        const foldedName = String(name).toLowerCase();
+        const foldedQuery = query.toLowerCase();
+        const score = (foldedName.includes(foldedQuery) ? 2 : 0) + (foldedName === foldedQuery ? 2 : 0) + 1;
+
+        return {
+          name,
+          brand: String(product.brands || '').split(',')[0].trim(),
+          quantity: String(product.quantity || '').trim(),
+          kcal,
+          protein,
+          carbs,
+          fat,
+          score
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (!best) return null;
+
+    const displayName = best.brand ? `${best.name} (${best.brand})` : best.name;
+    return {
+      name: displayName.slice(0, 64),
+      category: 'Hazır Gıdalar',
+      description: `OpenFoodFacts kaynagi${best.quantity ? ` - ${best.quantity}` : ''}`,
+      calories_per_100g: Math.max(1, Math.min(900, Math.round(best.kcal))),
+      protein_per_100g: Math.max(0, Math.min(100, Number(best.protein.toFixed(1)))),
+      carbs_per_100g: Math.max(0, Math.min(100, Number(best.carbs.toFixed(1)))),
+      fat_per_100g: Math.max(0, Math.min(100, Number(best.fat.toFixed(1)))),
+      confidence: 'medium',
+      source: 'openfoodfacts'
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
 function getFallbackDishIngredients(dishName) {
   const query = String(dishName || '').toLowerCase();
   const fallbackMap = [
@@ -590,6 +677,14 @@ async function getAIFoodSuggestion(searchTerm) {
     }
 
     if (!OPENROUTER_API_KEY && !GROQ_API_KEY && !GEMINI_API_KEY) {
+      const offFallback = await getOpenFoodFactsFallbackFood(searchTerm);
+      if (offFallback) {
+        return {
+          success: true,
+          food: offFallback
+        };
+      }
+
       return {
         success: true,
         food: getFallbackFoodEstimate(searchTerm)
@@ -624,6 +719,14 @@ Rules:
     const parsed = extractJsonPayload(text);
 
     if (!parsed || !parsed.name) {
+      const offFallback = await getOpenFoodFactsFallbackFood(searchTerm);
+      if (offFallback) {
+        return {
+          success: true,
+          food: offFallback
+        };
+      }
+
       return {
         success: true,
         food: getFallbackFoodEstimate(searchTerm)
@@ -644,6 +747,14 @@ Rules:
       }
     };
   } catch (error) {
+    const offFallback = await getOpenFoodFactsFallbackFood(searchTerm);
+    if (offFallback) {
+      return {
+        success: true,
+        food: offFallback
+      };
+    }
+
     return {
       success: true,
       food: getFallbackFoodEstimate(searchTerm)
