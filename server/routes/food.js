@@ -5,6 +5,41 @@ const { all, get, run } = require('../database');
 const { getAIFoodSuggestion } = require('../geminiService');
 const { analyzeFoodImage } = require('../visionService');
 
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const searchCache = new Map();
+
+const withTimeout = async (promise, timeoutMs, message = 'Request timeout') => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const getCachedSearch = (query) => {
+  const key = normalizeForSearch(query);
+  const cached = searchCache.get(key);
+  if (!cached) return null;
+  if (Date.now() > cached.expiresAt) {
+    searchCache.delete(key);
+    return null;
+  }
+  return cached.value;
+};
+
+const setCachedSearch = (query, value) => {
+  const key = normalizeForSearch(query);
+  searchCache.set(key, {
+    value,
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS
+  });
+};
+
 const normalizeForSearch = (value) => String(value || '')
   .trim()
   .toLowerCase()
@@ -354,6 +389,15 @@ router.get('/', async (req, res) => {
 
     // User search input is handled by AI API directly.
     if (searchText) {
+      if (normalizeForSearch(searchText).length < 2) {
+        return res.json([]);
+      }
+
+      const cached = getCachedSearch(searchText);
+      if (cached) {
+        return res.json(cached);
+      }
+
       const tryBuildResponse = (rawFood) => {
         const candidate = sanitizeAiFood(rawFood);
         const valid = isValidAiFood(candidate) && isAiCandidateRelevantToQuery(candidate, searchText);
@@ -363,22 +407,23 @@ router.get('/', async (req, res) => {
           {
             ...candidate,
             ai_generated: true,
-            source: 'ai-api',
+            source: candidate.source || 'ai-api',
             transient: true,
             confidence: candidate.confidence || 'medium'
           }
         ];
       };
 
-      const aiResult = await getAIFoodSuggestion(searchText);
+      const aiResult = await withTimeout(getAIFoodSuggestion(searchText), 9000, 'AI search timed out');
       const firstResponse = aiResult?.success && aiResult.food ? tryBuildResponse(aiResult.food) : null;
       if (firstResponse) {
+        setCachedSearch(searchText, firstResponse);
         return res.json(firstResponse);
       }
 
       const openFoodFactsFood = await getOpenFoodFactsSuggestion(searchText);
       if (openFoodFactsFood) {
-        return res.json([
+        const offResponse = [
           {
             ...openFoodFactsFood,
             ai_generated: true,
@@ -386,16 +431,20 @@ router.get('/', async (req, res) => {
             transient: true,
             confidence: openFoodFactsFood.confidence || 'medium'
           }
-        ]);
+        ];
+        setCachedSearch(searchText, offResponse);
+        return res.json(offResponse);
       }
 
       const strictPromptQuery = `${searchText} (tam olarak bu urun/marka, varyanti dogru olsun)`;
-      const retryAiResult = await getAIFoodSuggestion(strictPromptQuery);
+      const retryAiResult = await withTimeout(getAIFoodSuggestion(strictPromptQuery), 9000, 'AI strict search timed out');
       const secondResponse = retryAiResult?.success && retryAiResult.food ? tryBuildResponse(retryAiResult.food) : null;
       if (secondResponse) {
+        setCachedSearch(searchText, secondResponse);
         return res.json(secondResponse);
       }
 
+      setCachedSearch(searchText, []);
       return res.json([]);
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api';
 import './MealTracker.css';
 
@@ -26,17 +26,26 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [photoHint, setPhotoHint] = useState('');
+  const latestSearchSeqRef = useRef(0);
+  const searchDebounceRef = useRef(null);
 
   const mealTypes = ['Kahvaltı', 'Ara Öğün', 'Öğle Yemeği', 'Ara Öğün 2', 'Akşam Yemeği'];
 
-  const fetchFoods = useCallback(async (query = '') => {
+  const fetchFoods = useCallback(async (query = '', seq = null) => {
     try {
       const response = await api.get('/api/food', {
         params: { search: query }
       });
+      if (seq !== null && seq !== latestSearchSeqRef.current) {
+        return;
+      }
       setFoods(response.data);
     } catch (error) {
       console.error('Error fetching foods:', error);
+      if (seq !== null && seq !== latestSearchSeqRef.current) {
+        return;
+      }
+      setFoods([]);
     }
   }, []);
 
@@ -57,12 +66,30 @@ const MealTracker = ({ userId, onMealAdded }) => {
   const handleSearchFood = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    if (query.length > 0) {
-      fetchFoods(query);
-    } else {
-      setFoods([]);
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
     }
+
+    const trimmed = query.trim();
+    if (trimmed.length === 0) {
+      latestSearchSeqRef.current += 1;
+      setFoods([]);
+      return;
+    }
+
+    const seq = latestSearchSeqRef.current + 1;
+    latestSearchSeqRef.current = seq;
+    searchDebounceRef.current = setTimeout(() => {
+      fetchFoods(trimmed, seq);
+    }, 300);
   };
+
+  useEffect(() => () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+  }, []);
 
   const handleCreateMeal = async () => {
     try {
