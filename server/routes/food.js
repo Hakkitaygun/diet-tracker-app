@@ -16,6 +16,42 @@ const normalizeForSearch = (value) => String(value || '')
 
 const shouldUseAiForSearch = (query) => normalizeForSearch(query).length >= 3;
 
+const BRAND_FOOD_OVERRIDES = [
+  {
+    keys: ['nutella', 'findik kremasi', 'fındık kreması'],
+    food: {
+      name: 'Nutella',
+      category: 'Tatlılar',
+      description: 'Kakaolu fındık kreması',
+      calories_per_100g: 539,
+      protein_per_100g: 6.3,
+      carbs_per_100g: 57.5,
+      fat_per_100g: 30.9,
+      confidence: 'high'
+    }
+  },
+  {
+    keys: ['coco pops', 'cocopops', 'kelloggs coco pops', 'kellogg coco pops'],
+    food: {
+      name: 'Coco Pops',
+      category: 'Tahıllar',
+      description: 'Kakaolu kahvaltilik gevrek',
+      calories_per_100g: 385,
+      protein_per_100g: 7,
+      carbs_per_100g: 84,
+      fat_per_100g: 2.5,
+      confidence: 'high'
+    }
+  }
+];
+
+const getBrandOverride = (query) => {
+  const folded = normalizeForSearch(query);
+  return BRAND_FOOD_OVERRIDES.find((entry) =>
+    entry.keys.some((key) => folded.includes(normalizeForSearch(key)))
+  )?.food || null;
+};
+
 const isSuspiciousGeneratedFood = (food) => {
   const name = String(food?.name || '').trim();
   const category = String(food?.category || '').trim().toLowerCase();
@@ -128,6 +164,13 @@ router.get('/', async (req, res) => {
       foods = localTurkishFilter(allFoods, searchText, safeLimit).filter((food) => !isSuspiciousGeneratedFood(food));
     }
 
+    if (searchText && foods.length === 0) {
+      const brandFood = getBrandOverride(searchText);
+      if (brandFood) {
+        foods = [{ ...brandFood, ai_generated: true, confidence: 'high', transient: true }];
+      }
+    }
+
     if (searchText && foods.length === 0 && shouldUseAiForSearch(searchText)) {
       const aiResult = await getAIFoodSuggestion(searchText);
       if (aiResult?.success && aiResult.food) {
@@ -135,15 +178,8 @@ router.get('/', async (req, res) => {
         const confidence = candidate.confidence;
 
         if (isValidAiFood(candidate)) {
-          // Persist only non-low confidence items to avoid polluting catalog with weak guesses.
-          if (confidence === 'medium' || confidence === 'high') {
-            const savedFood = await upsertFoodRecord(candidate);
-            foods = savedFood
-              ? [{ ...savedFood, ai_generated: true, confidence }]
-              : [{ ...candidate, ai_generated: true }];
-          } else {
-            foods = [{ ...candidate, ai_generated: true }];
-          }
+          // Return AI suggestion as transient result; do not persist to catalog.
+          foods = [{ ...candidate, ai_generated: true, confidence, transient: true }];
         }
       }
     }

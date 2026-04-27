@@ -439,6 +439,8 @@ function getFallbackFoodEstimate(searchTerm) {
   const query = String(searchTerm || '').toLowerCase();
 
   const presets = [
+    { match: ['coco pops', 'cocopops'], name: 'Coco Pops', category: 'Tahıllar', calories_per_100g: 385, protein_per_100g: 7, carbs_per_100g: 84, fat_per_100g: 2.5, description: 'AI tahmini ile eşlenen kakaolu kahvaltılık gevrek' },
+    { match: ['nutella', 'findik kremasi', 'fındık kreması'], name: 'Nutella', category: 'Tatlılar', calories_per_100g: 539, protein_per_100g: 6.3, carbs_per_100g: 57.5, fat_per_100g: 30.9, description: 'AI tahmini ile eşlenen kakaolu fındık kreması' },
     { match: ['havuç'], name: 'Havuç', category: 'Sebzeler', calories_per_100g: 41, protein_per_100g: 0.9, carbs_per_100g: 10, fat_per_100g: 0.2, description: 'AI tahmini ile eşlenen taze havuç' },
     { match: ['elma'], name: 'Elma', category: 'Meyveler', calories_per_100g: 52, protein_per_100g: 0.3, carbs_per_100g: 14, fat_per_100g: 0.2, description: 'AI tahmini ile eşlenen taze elma' },
     { match: ['muz'], name: 'Muz', category: 'Meyveler', calories_per_100g: 89, protein_per_100g: 1.1, carbs_per_100g: 23, fat_per_100g: 0.3, description: 'AI tahmini ile eşlenen taze muz' },
