@@ -259,6 +259,20 @@ const getFoodSearchAIResult = async (query) => {
     
     // Mock fallback for development - provides reasonable estimates
     const mockData = {
+      'fındık': { name: 'Fındık', category: 'Kuruyemiş', description: 'Çiğ fındık', calories: 628, protein: 15, carbs: 17, fat: 61, confidence: 'high' },
+      'findik': { name: 'Fındık', category: 'Kuruyemiş', description: 'Çiğ fındık', calories: 628, protein: 15, carbs: 17, fat: 61, confidence: 'high' },
+      'badem': { name: 'Badem', category: 'Kuruyemiş', description: 'Çiğ badem', calories: 579, protein: 21, carbs: 22, fat: 50, confidence: 'high' },
+      'ceviz': { name: 'Ceviz', category: 'Kuruyemiş', description: 'Ceviz içi', calories: 654, protein: 15, carbs: 14, fat: 65, confidence: 'high' },
+      'elma': { name: 'Elma', category: 'Meyve', description: 'Taze elma', calories: 52, protein: 0.3, carbs: 14, fat: 0.2, confidence: 'high' },
+      'muz': { name: 'Muz', category: 'Meyve', description: 'Taze muz', calories: 89, protein: 1.1, carbs: 23, fat: 0.3, confidence: 'high' },
+      'yoğurt': { name: 'Yoğurt', category: 'Süt Ürünleri', description: 'Sade yoğurt', calories: 59, protein: 3.5, carbs: 3.6, fat: 3.3, confidence: 'high' },
+      'yogurt': { name: 'Yoğurt', category: 'Süt Ürünleri', description: 'Sade yoğurt', calories: 59, protein: 3.5, carbs: 3.6, fat: 3.3, confidence: 'high' },
+      'ayran': { name: 'Ayran', category: 'İçecek', description: 'Türk ayranı', calories: 25, protein: 1.5, carbs: 3, fat: 1, confidence: 'high' },
+      'ekmek': { name: 'Ekmek', category: 'Tahıllar', description: 'Beyaz ekmek', calories: 265, protein: 9, carbs: 49, fat: 3.2, confidence: 'high' },
+      'pilav': { name: 'Pilav', category: 'Yemek', description: 'Pirinç pilavı', calories: 150, protein: 4.5, carbs: 28, fat: 3, confidence: 'high' },
+      'pirinç': { name: 'Pirinç', category: 'Tahıllar', description: 'Pişmiş pirinç', calories: 130, protein: 2.7, carbs: 28, fat: 0.3, confidence: 'high' },
+      'pirinc': { name: 'Pirinç', category: 'Tahıllar', description: 'Pişmiş pirinç', calories: 130, protein: 2.7, carbs: 28, fat: 0.3, confidence: 'high' },
+      'tavuk': { name: 'Tavuk Göğsü', category: 'Et', description: 'Izgara tavuk göğsü', calories: 165, protein: 31, carbs: 0, fat: 3.6, confidence: 'high' },
       'sushi': { name: 'Sushi', category: 'Yemek', description: 'Pirinç ve balık', calories: 127, protein: 5.4, carbs: 20.3, fat: 2.2, confidence: 'medium' },
       'pizza': { name: 'Pizza', category: 'Yemek', description: 'Standart pizza', calories: 265, protein: 11, carbs: 36, fat: 10, confidence: 'medium' },
       'hamburger': { name: 'Hamburger', category: 'Yemek', description: 'Hamburger', calories: 215, protein: 15, carbs: 16, fat: 11, confidence: 'medium' },
@@ -282,6 +296,29 @@ const getFoodSearchAIResult = async (query) => {
     
     if (match) {
       const food = mockData[match];
+      return {
+        success: true,
+        food: {
+          name: food.name,
+          category: food.category,
+          description: food.description,
+          calories_per_100g: food.calories,
+          protein_per_100g: food.protein,
+          carbs_per_100g: food.carbs,
+          fat_per_100g: food.fat,
+          confidence: food.confidence
+        }
+      };
+    }
+
+    const normalized = queryLower.replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+    const normalizedMatch = Object.keys(mockData).find((key) => {
+      const foldedKey = String(key).toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+      return normalized.includes(foldedKey) || foldedKey.includes(normalized);
+    });
+
+    if (normalizedMatch) {
+      const food = mockData[normalizedMatch];
       return {
         success: true,
         food: {
