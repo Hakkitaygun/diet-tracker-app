@@ -418,30 +418,42 @@ const MealTracker = ({ userId, onMealAdded }) => {
               {foods.length === 0 && (
               <p className="no-results">Sonuç bulunamadı</p>
               )}
-              {foods.slice(0, 10).map(food => (
-                <div key={food.id || food.name} className="food-suggestion">
-                  <div className="food-info">
-                    <div className="food-name">
-                      {food.name}
-                      {food.ai_generated && <span className="ai-food-badge">AI</span>}
+              {foods.slice(0, 10).map(food => {
+                const multiplier = Math.max(1, Number(portionGrams) || 100) / 100;
+                const portionCalories = Math.round((food.calories_per_100g || 0) * multiplier);
+                const portionProtein = parseFloat(((food.protein_per_100g || 0) * multiplier).toFixed(1));
+                const portionCarbs = parseFloat(((food.carbs_per_100g || 0) * multiplier).toFixed(1));
+                const portionFat = parseFloat(((food.fat_per_100g || 0) * multiplier).toFixed(1));
+
+                return (
+                  <div key={food.id || food.name} className="food-suggestion">
+                    <div className="food-info">
+                      <div className="food-name">
+                        {food.name}
+                        {food.ai_generated && <span className="ai-food-badge">AI</span>}
+                      </div>
+                      <div className="food-nutrition-per-100">
+                        <span className="nutrition-value">{food.calories_per_100g} kcal</span>
+                        <span>P: {food.protein_per_100g}g</span>
+                        <span>K: {food.carbs_per_100g}g</span>
+                        <span>Y: {food.fat_per_100g}g</span>
+                      </div>
+                      <div className="food-nutrition-portion">
+                        <strong>Seçili porsiyon ({portionGrams}g):</strong>
+                        <span className="portion-calories">{portionCalories} kcal</span>
+                        <span>P: {portionProtein}g · K: {portionCarbs}g · Y: {portionFat}g</span>
+                      </div>
                     </div>
-                    <div className="food-details">
-                      <span>{food.calories_per_100g} kcal/100g</span>
-                      <span>Protein: {food.protein_per_100g}g</span>
-                      <span>
-                        Secili porsiyon: {Math.round((food.calories_per_100g || 0) * (Math.max(1, Number(portionGrams) || 100) / 100))} kcal
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => handleAddFoodToMeal(food)}
+                      disabled={!selectedMeal || loading}
+                      className="add-food-btn"
+                    >
+                      Ekle
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleAddFoodToMeal(food)}
-                    disabled={!selectedMeal || loading}
-                    className="add-food-btn"
-                  >
-                    Ekle
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

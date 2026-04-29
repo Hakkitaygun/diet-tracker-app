@@ -328,10 +328,11 @@
 .food-name {
   font-weight: 600;
   color: #333;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .ai-food-badge {
@@ -346,11 +347,43 @@
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-.food-details {
+
+.food-nutrition-per-100 {
   display: flex;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: #999;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.nutrition-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.food-nutrition-portion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #555;
+  background: #f5f5f5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+.food-nutrition-portion strong {
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.portion-calories {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.9rem;
 }
 
 .add-food-btn {

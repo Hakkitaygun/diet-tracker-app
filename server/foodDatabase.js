@@ -49,6 +49,7 @@ const FOOD_DATABASE = [
   // Nuts
   { name: 'Yer fıstığı', calories_per_100g: 567, protein: 26, carbs: 16, fat: 49, category: 'Yemişler', description: 'Tuz eklenmemiş yer fıstığı' },
   { name: 'Badem', calories_per_100g: 579, protein: 21, carbs: 22, fat: 50, category: 'Yemişler', description: 'Badem' },
+  { name: 'Nutella', calories_per_100g: 539, protein: 6.3, carbs: 57.5, fat: 30.9, category: 'Tatlılar', description: 'Kakaolu fındık kreması' },
   
   // Beverages
   { name: 'Süt kahvesi', calories_per_100g: 25, protein: 1.5, carbs: 2, fat: 1, category: 'İçecekler', description: 'Kahve ve süt' },
@@ -82,6 +83,29 @@ const FOOD_DATABASE = [
   { name: 'Fındık', calories_per_100g: 628, protein: 15, carbs: 17, fat: 61, category: 'Yemişler', description: 'Çiğ fındık' },
   { name: 'Kinoa', calories_per_100g: 120, protein: 4.4, carbs: 21, fat: 1.9, category: 'Tahıllar', description: 'Pişmiş kinoa' },
   { name: 'Mısır', calories_per_100g: 96, protein: 3.4, carbs: 21, fat: 1.5, category: 'Tahıllar', description: 'Haşlanmış mısır taneleri' },
+  
+  // Popular dishes and special foods
+  { name: 'Sushi', calories_per_100g: 127, protein: 5.4, carbs: 20.3, fat: 2.2, category: 'Yemek', description: 'Standart sushi (pirinç ve balık)' },
+  { name: 'Pizza', calories_per_100g: 265, protein: 11, carbs: 36, fat: 10, category: 'Yemek', description: 'Standart pizza' },
+  { name: 'Hamburger', calories_per_100g: 215, protein: 15, carbs: 16, fat: 11, category: 'Yemek', description: 'Standart hamburger' },
+  { name: 'Döner', calories_per_100g: 188, protein: 15, carbs: 15, fat: 9, category: 'Yemek', description: 'Et döner ekmek ile' },
+  { name: 'Kebap', calories_per_100g: 168, protein: 26, carbs: 2, fat: 7, category: 'Yemek', description: 'Kuşbaşı kebap' },
+  { name: 'Makarna bolonez', calories_per_100g: 118, protein: 8.5, carbs: 14, fat: 3.5, category: 'Yemek', description: 'Makarna bolonez sosu ile' },
+  { name: 'Çorba', calories_per_100g: 45, protein: 2.5, carbs: 7, fat: 0.8, category: 'Yemek', description: 'Standart et çorbası' },
+  { name: 'Pilav', calories_per_100g: 150, protein: 4.5, carbs: 28, fat: 3, category: 'Yemek', description: 'Pirinç pilav' },
+  { name: 'Türk kahvaltısı', calories_per_100g: 185, protein: 8, carbs: 20, fat: 9, category: 'Yemek', description: 'Peynir, zeytin, ekmek, yumurta' },
+  { name: 'Omlet', calories_per_100g: 154, protein: 13.6, carbs: 1.1, fat: 11, category: 'Yemek', description: 'Standart 2 yumurtalı omlet' },
+  { name: 'Biftek', calories_per_100g: 250, protein: 28, carbs: 0, fat: 14, category: 'Yemek', description: 'Pişmiş sığır biftek' },
+  { name: 'Salata', calories_per_100g: 25, protein: 2, carbs: 4, fat: 0.5, category: 'Yemek', description: 'Yeşil salata' },
+  { name: 'Çiğ köfte', calories_per_100g: 187, protein: 15, carbs: 12, fat: 9, category: 'Yemek', description: 'Geleneksel çiğ köfte' },
+  { name: 'Lahmacun', calories_per_100g: 239, protein: 12, carbs: 22, fat: 12, category: 'Yemek', description: 'Standart lahmacun' },
+  { name: 'Manti', calories_per_100g: 155, protein: 7, carbs: 18, fat: 6, category: 'Yemek', description: 'Haşlanmış manti' },
+  { name: 'Dolma', calories_per_100g: 98, protein: 4, carbs: 15, fat: 3, category: 'Yemek', description: 'Standart dolma' },
+  { name: 'Falafel', calories_per_100g: 333, protein: 13, carbs: 28, fat: 17, category: 'Yemek', description: 'Kızartılmış nohut falafel' },
+  { name: 'Humus', calories_per_100g: 150, protein: 7.5, carbs: 14, fat: 8, category: 'Yemek', description: 'Nohutlu humus' },
+  { name: 'Pide', calories_per_100g: 220, protein: 10, carbs: 28, fat: 8, category: 'Yemek', description: 'Standart etli pide' },
+  { name: 'Pastirma', calories_per_100g: 226, protein: 30, carbs: 0, fat: 11, category: 'Et Ürünleri', description: 'Pastirma' },
+  { name: 'Sucuk', calories_per_100g: 435, protein: 20, carbs: 2, fat: 39, category: 'Et Ürünleri', description: 'Kuru sucuk' },
 ];
 
 // Initialize food database

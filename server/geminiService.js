@@ -31,7 +31,7 @@ const APP_NAME = process.env.OPENROUTER_APP_NAME || 'Diet Tracker App';
 // 📋 Request Queue - prevent concurrent API calls
 let isRequestInProgress = false;
 const requestQueue = [];
-const RATE_LIMIT_COOLDOWN = 65000; // 65 seconds after 429 error
+const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds after 429 error (adjusted for development)
 const providerCooldownUntil = {
   openrouter: 0,
   groq: 0,
