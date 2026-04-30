@@ -153,7 +153,7 @@ const UserProfile = ({ userId, onUserCreated, onUserUpdated }) => {
       <div className="user-profile">
         <div className="profile-container">
           <div className="profile-header">
-            <h2>🥗 Diyetisyen AI'ye Hoş Geldiniz</h2>
+            <h2>🥗 Diyetisyene Hoş Geldiniz</h2>
             <p>Önce profilinizi oluşturun</p>
           </div>
 

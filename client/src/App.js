@@ -3,10 +3,7 @@ import api from './api';
 import './App.css';
 import Dashboard from './components/Dashboard';
 import MealTracker from './components/MealTracker';
-import Recommendations from './components/Recommendations';
 import UserProfile from './components/UserProfile';
-import DietPlanner from './components/DietPlanner';
-import Analytics from './components/Analytics';
 import AuthScreen from './components/AuthScreen';
 
 function App() {
@@ -119,7 +116,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>🥗 Diyetisyen AI</h1>
+          <h1>🥗 Diyetisyen</h1>
           <p>Kişiselleştirilmiş Beslenme Danışmanı</p>
         </div>
         <div className="user-info">
@@ -147,24 +144,6 @@ function App() {
           🍽️ Beslenme Takibi
         </button>
         <button 
-          className={currentPage === 'recommendations' ? 'active' : ''}
-          onClick={() => setCurrentPage('recommendations')}
-        >
-          ⚡ Öneriler
-        </button>
-        <button 
-          className={currentPage === 'diet-planner' ? 'active' : ''}
-          onClick={() => setCurrentPage('diet-planner')}
-        >
-          🗓️ Planlar
-        </button>
-        <button 
-          className={currentPage === 'analytics' ? 'active' : ''}
-          onClick={() => setCurrentPage('analytics')}
-        >
-          📈 İstatistikler
-        </button>
-        <button 
           className={currentPage === 'profile' ? 'active' : ''}
           onClick={() => setCurrentPage('profile')}
         >
@@ -175,14 +154,11 @@ function App() {
       <main className="app-main">
         {currentPage === 'dashboard' && <Dashboard userId={userId} user={user} onUpdate={fetchUser} refreshKey={dashboardRefresh} />}
         {currentPage === 'meal-tracker' && <MealTracker userId={userId} onMealAdded={() => { fetchUser(); bumpDashboardRefresh(); }} />}
-        {currentPage === 'recommendations' && <Recommendations userId={userId} refreshKey={dashboardRefresh} />}
-        {currentPage === 'diet-planner' && <DietPlanner userId={userId} onPreferencesUpdated={() => { fetchUser(); bumpDashboardRefresh(); }} />}
-        {currentPage === 'analytics' && <Analytics userId={userId} />}
         {currentPage === 'profile' && <UserProfile userId={userId} onUserUpdated={() => { fetchUser(); bumpDashboardRefresh(); }} />}
       </main>
 
       <footer className="app-footer">
-        <p>💚 Sağlıklı bir yaşam için yapay zeka destekli beslenme danışmanı</p>
+        <p>💚 Sağlıklı bir yaşam için beslenme danışmanı</p>
       </footer>
     </div>
   );

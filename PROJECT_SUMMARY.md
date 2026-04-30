@@ -1,4 +1,4 @@
-# Diyetisyen AI - Proje Özeti
+# Diyetisyen - Proje Özeti
 
 ## ✅ Tamamlanan Bileşenler
 
@@ -6,12 +6,11 @@
 ✓ RESTful API ile 20+ endpoint
 ✓ SQLite veritabanı
 ✓ 30+ gıda veritabanı
-✓ AI destekli tavsiyeler motoru
 ✓ Beslenme analizi
 ✓ Kilo ve sağlık metrikleri takibi
 
 ### Frontend (React)
-✓ 5 ana sayfa/sekme
+✓ 3 ana sayfa/sekme
 ✓ Responsive tasarım
 ✓ İstatistik grafikleri
 ✓ Gerçek zamanlı hesaplamalar
@@ -23,13 +22,6 @@
 ✓ Günlük beslenme özeti
 ✓ Sağlık metrikleri
 ✓ Gıda veritabanı
-
-### AI Özellikleri
-✓ Kişiselleştirilmiş kalori tavsiyeleri
-✓ Makronutrient dağılımı analizi
-✓ Beslenme kalite raporu
-✓ Yemek önerileri
-✓ Haftalık/aylık istatistikler
 
 ## 📁 Tüm Dosyalar
 
@@ -49,7 +41,6 @@ diet-tracker-app/
 │   └── routes/
 │       ├── food.js
 │       ├── meals.js
-│       ├── ai.js
 │       └── user.js
 │
 └── client/
@@ -64,8 +55,6 @@ diet-tracker-app/
     │   └── components/
     │       ├── Dashboard.js + .css
     │       ├── MealTracker.js + .css
-    │       ├── Recommendations.js + .css
-    │       ├── Analytics.js + .css
     │       └── UserProfile.js + .css
 ```
 
@@ -83,11 +72,10 @@ diet-tracker-app/
 - Gün içerisinde birden fazla yemek
 - Yemek türü kategorileri (Kahvaltı, Öğle, vb)
 
-### 3. AI Tavsiyeleri
-- Günlük kalori hedefine göre öneriler
-- Beslenme kalitesi analizi
-- Makronutrient dengesinde iyileştirmeler
-- Yemek kombinasyon önerileri
+### 3. Özet ve Analiz
+- Günlük özet verisi oluşturulur
+- Kalori ve makro dağılımı gösterilir
+- Kullanıcı kendi öğünlerini ve ilerlemesini takip eder
 
 ### 4. İstatistikler
 - Haftalık/aylık trend grafikleri
@@ -118,10 +106,10 @@ SQLite Database
    - Meal items → Makronutrientler hesaplanır
    - Daily summary → Otomatik güncellenir
 
-3. **Tavsiye Üretimi**
-   - Daily summary verisi alınır
-   - AI algoritması çalıştırılır
-   - Kişiselleştirilmiş öneriler döndürülür
+3. **Özet ve Analiz**
+    - Daily summary verisi alınır
+    - Kalori ve makro değerleri hesaplanır
+    - Günlük ilerleme görünür hale getirilir
 
 4. **İstatistik**
    - Tarihsel veriler alınır
@@ -198,7 +186,6 @@ npm run client
 - **Node.js**: Server ortamı
 - **Express**: Web framework
 - **SQLite3**: Veritabanı
-- **Axios**: HTTP requests
 - **CORS**: Cross-origin requests
 
 ### Frontend
@@ -210,29 +197,6 @@ npm run client
 ### Araçlar
 - **npm**: Paket yöneticisi
 - **Git**: Sürüm kontrolü
-
-## 💡 AI Algoritması
-
-Sistem aşağıdaki faktörleri analiz ederek öneriler üretir:
-
-1. **Kalori Dengesi**
-   - Tüketilen vs. Hedef kalori
-   - Günün kalan kısmı için öneriler
-
-2. **Makronutrient Dengeleme**
-   - Protein oranı kontrolü
-   - Karbohidrat dağılımı
-   - Yağ oranı analizi
-
-3. **Beslenme Kalitesi**
-   - Vitamin ve mineral kaynakları
-   - İşlenmiş gıda uyarısı
-   - Çeşitlilik tavsiyesi
-
-4. **Kişisel Hedef**
-   - Kilo verme: Kalori açığı
-   - Kas kazanma: Protein artışı
-   - Sağlık: Dengeli beslenme
 
 ## 🎨 Renk Paleti
 
@@ -271,7 +235,6 @@ Sistem aşağıdaki faktörleri analiz ederek öneriler üretir:
 ✓ Profil oluşturma
 ✓ Yemek ekleme
 ✓ Kalori hesaplaması
-✓ AI tavsiyeleri
 ✓ İstatistikler
 ✓ Responsive tasarım
 ✓ Veritabanı işlemleri

@@ -3,8 +3,6 @@ const cors = require('cors');
 require('dotenv').config();
 const foodRoutes = require('./routes/food');
 const mealRoutes = require('./routes/meals');
-const aiRoutes = require('./routes/ai');
-const dietRoutes = require('./routes/diet');
 const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
 const { initializeDatabase } = require('./database');
@@ -23,8 +21,6 @@ const startServer = async () => {
   // Routes
   app.use('/api/food', foodRoutes);
   app.use('/api/meals', mealRoutes);
-  app.use('/api/ai', aiRoutes);
-  app.use('/api/diet', dietRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/auth', authRoutes.router);
 

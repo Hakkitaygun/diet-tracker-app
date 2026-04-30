@@ -1,4 +1,4 @@
-# Windows Kurulum Kılavuzu - Diyetisyen AI
+﻿# Windows Kurulum Kılavuzu - Diyetisyen
 
 Adım adım Windows'ta uygulamayı kurma ve çalıştırma talimatları.
 
@@ -67,7 +67,7 @@ npm run dev
 ### Adım 3: Kullan!
 1. Profil oluşturun
 2. Yemek ekleyin
-3. AI önerilerini görün
+3. Dashboard ve öğün takibini kullanın
 
 ## 🌐 Tarayıcıda Açma
 

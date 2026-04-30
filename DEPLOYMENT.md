@@ -77,9 +77,6 @@ https://render.com → GitHub ile kaydol
 
 Render Dashboard → Environment:
 ```
-OPENROUTER_API_KEY=sk-or-...
-GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AIzaSy...
 DATABASE_URL=postgresql://user:pass@host/db
 NODE_ENV=production
 ```

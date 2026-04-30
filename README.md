@@ -1,22 +1,15 @@
-# 🥗 Diyetisyen AI - Yapay Zeka Destekli Beslenme Danışmanı
+# 🥗 Diyetisyen - Beslenme Takip Uygulaması
 
-Kişiselleştirilmiş beslenme tavsiyeleri veren, kalorileri otomatik olarak hesaplayan ve yapay zeka destekli bir diyetisyen uygulaması.
+Yediklerinizi takip etmenizi, günlük kalori ve makro değerlerini görmenizi ve öğünlerinizi yönetmenizi sağlayan bir beslenme takip uygulaması.
 
 ## ✨ Özellikler
 
 ### 📊 Ana Özellikler
 - **Akıllı Yemek Takibi**: Yediklerinizi yazın, kalori otomatik hesaplansın
-- **AI Destekli Tavsiyeler**: Kişiselleştirilmiş diyetisyen önerileri
-- **Beslenme Analizi**: Makronutrient dağılımı ve beslenme önerileri
-- **İstatistikler**: Haftalık ve aylık trendleri takip edin
+- **Beslenme Analizi**: Makronutrient dağılımı ve günlük özetler
+- **İstatistikler**: Günlük ve haftalık trendleri takip edin
 - **Kilo Takibi**: Kilo değişimini izleyin
-- **Yemek Önerileri**: Hedeflerinize göre önerilen yemekler
-
-### 💡 AI Özellikleri
-- Günlük hedeflerinize göre otomatik öneriler
-- Beslenme analizi ve tavsiyeleri
-- Makronutrient dağılımı kontrolü
-- Sağlık metrikleri analizi
+- **Gıda Arama**: Kayıtlı gıdaları hızlıca bulun ve öğüne ekleyin
 
 ### 🎨 UI/UX
 - Güzel ve şık arayüz
@@ -71,7 +64,6 @@ diet-tracker-app/
 │   ├── routes/
 │   │   ├── food.js       # Gıda API endpoints
 │   │   ├── meals.js      # Yemek API endpoints
-│   │   ├── ai.js         # AI tavsiyeleri API
 │   │   └── user.js       # Kullanıcı yönetimi API
 │   ├── package.json
 │   └── .env              # Çevre değişkenleri
@@ -85,8 +77,6 @@ diet-tracker-app/
 │   │   └── components/
 │   │       ├── Dashboard.js          # Ana sayfa
 │   │       ├── MealTracker.js        # Yemek takibi
-│   │       ├── Recommendations.js    # AI önerileri
-│   │       ├── Analytics.js          # İstatistikler
 │   │       ├── UserProfile.js        # Kullanıcı profili
 │   │       └── [bileşen].css        # Stil dosyaları
 │   ├── package.json
@@ -128,11 +118,6 @@ Uygulama SQLite kullanmaktadır. Veritabanı otomatik olarak ilk çalıştırmad
 - `POST /api/meals/:mealId/items` - Yemeğe gıda ekle
 - `GET /api/meals/summary/:userId` - Günlük özet
 
-### AI API
-- `POST /api/ai/recommendations` - Kişiselleştirilmiş tavsiyeler
-- `GET /api/ai/suggestions/:userId` - Yemek önerileri
-- `GET /api/ai/analytics/:userId` - İstatistik ve trendler
-
 ## 🎯 Nasıl Kullanılır?
 
 ### 1. Profil Oluştur
@@ -144,15 +129,11 @@ Uygulama SQLite kullanmaktadır. Veritabanı otomatik olarak ilk çalıştırmad
 - Yediklerinizi arayın ve ekleyin
 - Kaloriler otomatik hesaplanır
 
-### 3. Önerileri Al
-- "Öneriler" sayfasında AI destekli tavsiyeleri görün
-- Beslenme analizi ve yapacağınız iyileştirmeleri kontrol edin
-
-### 4. İstatistikleri Takip Et
+### 3. İstatistikleri Takip Et
 - "İstatistikler" sayfasında haftalık ve aylık trendleri görün
 - Beslenme alışkanlıklarınızı analiz edin
 
-### 5. Profil Güncelleyin
+### 4. Profil Güncelleyin
 - Kilo değişimlerini kaydedin
 - Hedeflerinizi güncelleyin
 
@@ -185,9 +166,6 @@ Uygulama 30+ Türk ve uluslararası gıdayı içermektedir:
   description: 'Açıklama'
 }
 ```
-
-### AI Önerilerini Özelleştir
-`server/routes/ai.js` dosyasındaki `generateRecommendations` fonksiyonunu düzenleyin.
 
 ## 🔒 Güvenlik Notları
 
@@ -241,9 +219,7 @@ Bu proje kişisel kullanım için tasarlanmıştır.
 
 ## 🚀 Gelecek Planları
 
-- [ ] Akıllı yemek önerileri (ML tabanlı)
 - [ ] Gıda fotoğrafı tanıma
-- [ ] Beslenme koçu chatbot
 - [ ] Mobil uygulama (React Native)
 - [ ] Cloud depolama
 - [ ] Sosyal paylaşım özellikleri

@@ -57,7 +57,7 @@ const AuthScreen = ({ onSuccess }) => {
     <div className="auth-screen">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>🥗 Diyetisyen AI</h1>
+          <h1>🥗 Diyetisyen</h1>
           <p>Hesabınıza giriş yapın veya yeni bir hesap oluşturun.</p>
         </div>
 

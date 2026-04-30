@@ -206,30 +206,6 @@ const tableDefinitions = {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
-  },
-  ai_usage: {
-    sqlite: `
-      CREATE TABLE IF NOT EXISTS ai_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        usage_date DATE NOT NULL,
-        request_count INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, usage_date)
-      )
-    `,
-    postgres: `
-      CREATE TABLE IF NOT EXISTS ai_usage (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        usage_date DATE NOT NULL,
-        request_count INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, usage_date)
-      )
-    `
   }
 };
 
@@ -314,7 +290,7 @@ const ensureColumn = async (table, column, definition) => {
 };
 
 const initializeDatabase = async () => {
-  const tableOrder = ['users', 'meals', 'meal_items', 'food_database', 'diet_preferences', 'daily_summary', 'health_metrics', 'ai_usage'];
+  const tableOrder = ['users', 'meals', 'meal_items', 'food_database', 'diet_preferences', 'daily_summary', 'health_metrics'];
 
   for (const tableName of tableOrder) {
     await run(tableDefinitions[tableName][usePostgres ? 'postgres' : 'sqlite']);

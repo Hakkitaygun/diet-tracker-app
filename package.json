@@ -1,7 +1,7 @@
 {
   "name": "diet-tracker-app",
   "version": "1.0.0",
-  "description": "AI-powered diet tracking and nutrition advisor application",
+  "description": "Diet tracking and nutrition logging application",
   "main": "server/index.js",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",

@@ -1,8 +1,8 @@
-# CHANGELOG - Diyetisyen AI
+﻿# CHANGELOG - Diyetisyen
 
 ## v1.0.0 - 2026-04-21
 
-### 🎉 İlk Sürüm - Tam Özellikli AI Diyet Takip Uygulaması
+### 🎉 İlk Sürüm - Diyet Takip Uygulaması
 
 #### Backend Özellikleri
 - ✅ Express.js REST API
@@ -10,17 +10,16 @@
 - ✅ 30+ gıda veritabanı
 - ✅ Kullanıcı yönetimi
 - ✅ Yemek ve beslenme takibi
-- ✅ AI destekli tavsiye motoru
 - ✅ İstatistik ve analitik API
 - ✅ Günlük özet hesaplaması
 
 #### Frontend Özellikleri
 - ✅ React 18 uygulaması
-- ✅ 5 ana sayfa (Dashboard, Tracker, Recommendations, Analytics, Profile)
+- ✅ 3 ana sayfa (Dashboard, Tracker, Profile)
 - ✅ Responsive tasarım
 - ✅ Recharts ile istatistik grafikleri
 - ✅ Gerçek zamanlı kalori hesaplaması
-- ✅ Beautiful modern UI
+- ✅ Modern arayüz
 
 #### Veritabanı
 - ✅ Users tablosu
@@ -30,7 +29,7 @@
 - ✅ Daily Summary tablosu
 - ✅ Health Metrics tablosu
 
-#### API Endpoints (20+)
+#### API Endpoints
 **Kullanıcı API**
 - POST /api/user - Yeni kullanıcı oluştur
 - GET /api/user/:userId - Kullanıcı bilgisi al
@@ -52,11 +51,6 @@
 - POST /api/meals/:mealId/items - Gıda ekle
 - GET /api/meals/summary/:userId - Günlük özet
 
-**AI API**
-- POST /api/ai/recommendations - Tavsiyeler
-- GET /api/ai/suggestions/:userId - Yemek önerileri
-- GET /api/ai/analytics/:userId - İstatistikler
-
 #### UI Bileşenleri
 **Dashboard.js**
 - Günlük kalori hedefi göstergesi
@@ -70,18 +64,6 @@
 - Otomatik kalori hesaplaması
 - Yemek yönetimi
 
-**Recommendations.js**
-- AI destekli tavsiyeler
-- Beslenme analizi
-- Makronutrient oranları
-- Yemek önerileri (Kahvaltı, Öğle, Akşam, Ara)
-
-**Analytics.js**
-- Haftalık/aylık grafikler
-- Kalori trend analizi
-- Makronutrient dağılımı
-- İçgörüler ve öneriler
-
 **UserProfile.js**
 - Profil oluşturma ve güncelleme
 - Kilo takibi
@@ -89,10 +71,9 @@
 - Beslenme hedef yönetimi
 
 #### Özellikler
-- 🎨 Beautiful modern UI (Gradient, shadows, animations)
+- 🎨 Modern UI
 - 📱 Mobil uyumlu responsive tasarım
 - 📊 İnteraktif grafikler ve charts
-- 🧠 AI destekli tavsiyeler
 - 💾 Yerel SQLite veritabanı
 - 🔍 Gıda arama ve oto-tamamlama
 - 📈 İstatistik ve trend analizi
@@ -110,34 +91,30 @@
 
 #### Dosyalar
 **Backend**
-- server/index.js (Main server)
-- server/database.js (Database setup)
-- server/foodDatabase.js (Food data)
-- server/routes/food.js (Food API)
-- server/routes/meals.js (Meals API)
-- server/routes/ai.js (AI API)
-- server/routes/user.js (User API)
-- server/.env (Configuration)
+- server/index.js
+- server/database.js
+- server/foodDatabase.js
+- server/routes/food.js
+- server/routes/meals.js
+- server/routes/user.js
 - server/package.json
 
 **Frontend**
-- client/src/App.js (Main app)
-- client/src/App.css (Styles)
+- client/src/App.js
+- client/src/App.css
 - client/src/index.js
 - client/src/index.css
 - client/public/index.html
 - client/src/components/Dashboard.js + .css
 - client/src/components/MealTracker.js + .css
-- client/src/components/Recommendations.js + .css
-- client/src/components/Analytics.js + .css
 - client/src/components/UserProfile.js + .css
 - client/package.json
 
 **Documentation**
-- README.md (Kapsamlı kılavuz)
-- QUICKSTART.md (Hızlı başlangıç)
-- PROJECT_SUMMARY.md (Proje özeti)
-- CHANGELOG.md (Bu dosya)
+- README.md
+- QUICKSTART.md
+- PROJECT_SUMMARY.md
+- CHANGELOG.md
 
 **Configuration**
 - .gitignore
@@ -148,7 +125,6 @@
 - React 18
 - SQLite3
 - Recharts
-- Axios
 - CSS3
 
 #### Kurulum
@@ -157,7 +133,7 @@ npm install
 npm run dev
 ```
 
-#### Porlar
+#### Portlar
 - Frontend: http://localhost:3000
 - Backend: http://localhost:5000
 
@@ -168,7 +144,6 @@ npm run dev
 - Veritabanı otomatik oluşturulur
 - Veriler yerel olarak saklanır
 - Responsive tasarım tüm cihazlarda çalışır
-- AI algoritması etkili ve güvenilir
 
 ### Bilinen Limitasyonlar
 - Offline mode yok (ilk yüklemeden sonra yapılabilir)

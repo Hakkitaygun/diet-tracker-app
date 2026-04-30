@@ -1,8 +1,8 @@
-# ⚡ Hızlı Başlangıç Kılavuzu
+﻿# ⚡ Hızlı Başlangıç Kılavuzu
 
 ## 1️⃣ İlk Adım: Uygulamayı Başlatın
 
-PowerShell veya Command Prompt'ı açın ve şu komutları çalıştırın:
+PowerShell veya Command Prompt açın ve şu komutları çalıştırın:
 
 ```bash
 # Proje dizinine git
@@ -35,13 +35,12 @@ Otomatik olarak açılmadıysa:
 4. Gıda arayın ve ekleyin
 5. Kaloriler otomatik hesaplanır!
 
-## 5️⃣ Önerileri Görün
+## 5️⃣ İlerlemeyi Görün
 
-"Öneriler" sekmesinde:
-- AI destekli diyetisyen tavsiyeleri
-- Beslenme analizi
-- Yemek önerileri
-- Makronutrient dağılımı
+Dashboard bölümünde:
+- Günlük kalori hedefinizi görün
+- Protein, karbonhidrat ve yağ değerlerini takip edin
+- Günün yemeklerini inceleyin
 
 ## 6️⃣ İstatistikleri Takip Edin
 
@@ -62,16 +61,6 @@ Otomatik olarak açılmadıysa:
 - **Otomatik Hesaplama**: 100g bazlı kaloriler
 - **Yemek Yönetimi**: Günlük yemekleri görün
 
-### AI Önerileri (Recommendations)
-- **Diyetisyen Tavsiyeleri**: Yapay zeka tabanlı
-- **Beslenme Analisi**: Makronutrient oranları
-- **Yemek Önerileri**: Kahvaltı, Öğle, Akşam
-
-### İstatistikler (Analytics)
-- **Çizelgeler**: Kalori ve makronutrient grafikleri
-- **Trendler**: Haftalık/aylık değişimler
-- **İçgörüler**: Kişiselleştirilmiş tavsiyeler
-
 ### Profil (User Profile)
 - **Bilgi Güncelleme**: Yaş, kilo, hedef
 - **Kilo Takibi**: Ağırlık değişimlerini kaydedin
@@ -80,7 +69,7 @@ Otomatik olarak açılmadıysa:
 ## 💡 Faydalı İpuçları
 
 ### Kalori Hedefi Nasıl Çalışır?
-- Sistem kilonuza, yaşınız ve cinsiyete göre hedef hesaplar
+- Sistem kilonuza, yaşınıza ve cinsiyete göre hedef hesaplar
 - Harris-Benedict formülü kullanılır
 - Manuel olarak değiştirebilirsiniz
 
@@ -132,8 +121,8 @@ server/diet_tracker.db
 ## 🚀 Sonraki Adımlar
 
 1. **Kilo takibine başlayın**: Profilde "Kilo Kaydet"
-2. **Haftalık göz at**: İstatistikleri kontrol edin
-3. **AI önerilerini uygulayin**: Beslenme alışkanlıklarını iyileştirin
+2. **Haftalık göz atın**: İstatistikleri kontrol edin
+3. **Günlük özetinizi inceleyin**: Dashboard üzerinden kalori ve makroları kontrol edin
 
 ## ❓ Sık Sorulan Sorular
 
